@@ -16,20 +16,31 @@ interface SelectionOverlayProps {
 interface ResizeBounds {
   minWidth: number;
   minHeight: number;
-  maxWidth: number;
-  maxHeight: number;
+  maxWidthEast: number;
+  maxWidthWest: number;
+  maxHeightSouth: number;
+  maxHeightNorth: number;
 }
 
 interface ResizeState extends ResizeBounds {
+  direction: ResizeDirection;
   startX: number;
   startY: number;
   startWidth: number;
   startHeight: number;
+  horizontalOffsetProp: 'left' | 'marginLeft';
+  verticalOffsetProp: 'top' | 'marginTop';
+  startHorizontalOffset: number;
+  startVerticalOffset: number;
 }
+
+type ResizeDirection = 'n' | 'e' | 's' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+type PendingBoxStyle = Record<string, string>;
 
 const MIN_RESIZE_SIZE = 16;
 const MAX_RESIZE_SIZE = 4000;
 const COLLISION_GAP = 4;
+const RESIZE_DIRECTIONS: ResizeDirection[] = ['n', 'e', 's', 'w', 'ne', 'nw', 'se', 'sw'];
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(value, Math.max(min, max)));
@@ -48,25 +59,63 @@ function supportsBoxResize(el: HTMLElement): boolean {
   return getComputedStyle(el).display !== 'inline';
 }
 
+function getBoxResizeDirections(el: HTMLElement): ResizeDirection[] {
+  if (!supportsBoxResize(el)) return [];
+  if (!isCapabilityEnabled(getDisabledCapabilities(el), 'resize')) return [];
+  return RESIZE_DIRECTIONS;
+}
+
+function getResizeCursor(direction: ResizeDirection): string {
+  if (direction === 'n' || direction === 's') return 'ns-resize';
+  if (direction === 'e' || direction === 'w') return 'ew-resize';
+  if (direction === 'ne' || direction === 'sw') return 'nesw-resize';
+  return 'nwse-resize';
+}
+
+function getNumericStyleValue(value: string, fallback: number): number {
+  return parsePixelValue(value) ?? fallback;
+}
+
 function getResizeBounds(el: HTMLElement, rect: DOMRect): ResizeBounds {
   const computed = getComputedStyle(el);
   const parent = el.parentElement;
   const minWidth = Math.max(MIN_RESIZE_SIZE, parsePixelValue(computed.minWidth) ?? 0);
   const minHeight = Math.max(MIN_RESIZE_SIZE, parsePixelValue(computed.minHeight) ?? 0);
-  let maxWidth = Math.min(MAX_RESIZE_SIZE, window.innerWidth - rect.left);
-  let maxHeight = Math.min(MAX_RESIZE_SIZE, window.innerHeight - rect.top);
+  const isPositioned = computed.position !== 'static';
+  let maxWidthEast = Math.min(MAX_RESIZE_SIZE, window.innerWidth - rect.left);
+  let maxWidthWest = Math.min(MAX_RESIZE_SIZE, rect.right);
+  let maxHeightSouth = Math.min(MAX_RESIZE_SIZE, window.innerHeight - rect.top);
+  let maxHeightNorth = Math.min(MAX_RESIZE_SIZE, rect.bottom);
 
   if (parent) {
     const parentRect = parent.getBoundingClientRect();
     const parentStyle = getComputedStyle(parent);
     if (parentRect.right > rect.left) {
-      maxWidth = Math.min(maxWidth, parentRect.right - rect.left);
+      maxWidthEast = Math.min(maxWidthEast, parentRect.right - rect.left);
     }
+    maxWidthWest = Math.min(
+      maxWidthWest,
+      isPositioned
+        ? rect.right - parentRect.left
+        : rect.width + Math.max(0, getNumericStyleValue(computed.marginLeft, 0)),
+    );
+
     if (parentStyle.overflowY !== 'visible' && parentRect.bottom > rect.top) {
-      maxHeight = Math.min(maxHeight, parentRect.bottom - rect.top);
+      maxHeightSouth = Math.min(maxHeightSouth, parentRect.bottom - rect.top);
+      maxHeightNorth = Math.min(
+        maxHeightNorth,
+        isPositioned
+          ? rect.bottom - parentRect.top
+          : rect.height + Math.max(0, getNumericStyleValue(computed.marginTop, 0)),
+      );
+    } else if (!isPositioned) {
+      maxHeightNorth = Math.min(
+        maxHeightNorth,
+        rect.height + Math.max(0, getNumericStyleValue(computed.marginTop, 0)),
+      );
     }
 
-    if (computed.position !== 'static') {
+    if (isPositioned) {
       Array.from(parent.children).forEach((sibling) => {
         if (!(sibling instanceof HTMLElement) || sibling === el) return;
         if (sibling.hasAttribute('data-morph-editor')) return;
@@ -74,11 +123,19 @@ function getResizeBounds(el: HTMLElement, rect: DOMRect): ResizeBounds {
         if (siblingRect.width === 0 && siblingRect.height === 0) return;
         if (siblingRect.left >= rect.left + minWidth &&
           overlaps(rect.top, rect.bottom, siblingRect.top, siblingRect.bottom)) {
-          maxWidth = Math.min(maxWidth, siblingRect.left - rect.left - COLLISION_GAP);
+          maxWidthEast = Math.min(maxWidthEast, siblingRect.left - rect.left - COLLISION_GAP);
+        }
+        if (siblingRect.right <= rect.right - minWidth &&
+          overlaps(rect.top, rect.bottom, siblingRect.top, siblingRect.bottom)) {
+          maxWidthWest = Math.min(maxWidthWest, rect.right - siblingRect.right - COLLISION_GAP);
         }
         if (siblingRect.top >= rect.top + minHeight &&
           overlaps(rect.left, rect.right, siblingRect.left, siblingRect.right)) {
-          maxHeight = Math.min(maxHeight, siblingRect.top - rect.top - COLLISION_GAP);
+          maxHeightSouth = Math.min(maxHeightSouth, siblingRect.top - rect.top - COLLISION_GAP);
+        }
+        if (siblingRect.bottom <= rect.bottom - minHeight &&
+          overlaps(rect.left, rect.right, siblingRect.left, siblingRect.right)) {
+          maxHeightNorth = Math.min(maxHeightNorth, rect.bottom - siblingRect.bottom - COLLISION_GAP);
         }
       });
     }
@@ -87,23 +144,25 @@ function getResizeBounds(el: HTMLElement, rect: DOMRect): ResizeBounds {
   return {
     minWidth,
     minHeight,
-    maxWidth: Math.max(minWidth, maxWidth),
-    maxHeight: Math.max(minHeight, maxHeight),
+    maxWidthEast: Math.max(minWidth, maxWidthEast),
+    maxWidthWest: Math.max(minWidth, maxWidthWest),
+    maxHeightSouth: Math.max(minHeight, maxHeightSouth),
+    maxHeightNorth: Math.max(minHeight, maxHeightNorth),
   };
 }
 
 export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
   const { selectedPath, config, dispatch } = useMorphContext();
   const [rect, setRect] = useState<DOMRect | null>(null);
-  const [canResize, setCanResize] = useState(false);
+  const [resizeDirections, setResizeDirections] = useState<ResizeDirection[]>([]);
   const resizeStateRef = useRef<ResizeState | null>(null);
-  const pendingSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const pendingBoxStyleRef = useRef<PendingBoxStyle | null>(null);
   const frameRef = useRef<number | null>(null);
 
   const updateRect = useCallback(() => {
     if (!selectedPath || !containerRef.current) {
       setRect(null);
-      setCanResize(false);
+      setResizeDirections([]);
       return;
     }
     const el = containerRef.current.querySelector<HTMLElement>(
@@ -111,17 +170,14 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
     );
     if (el) {
       setRect(el.getBoundingClientRect());
-      setCanResize(
-        supportsBoxResize(el) &&
-        isCapabilityEnabled(getDisabledCapabilities(el), 'resize'),
-      );
+      setResizeDirections(getBoxResizeDirections(el));
     } else {
       setRect(null);
-      setCanResize(false);
+      setResizeDirections([]);
     }
   }, [selectedPath, containerRef]);
 
-  const updateSelectedSize = useCallback((width: number, height: number) => {
+  const updateSelectedBox = useCallback((style: PendingBoxStyle) => {
     if (!selectedPath) return;
     dispatch({
       type: 'SET_OVERRIDE',
@@ -130,51 +186,61 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
         override: {
           style: {
             ...(config[selectedPath]?.style ?? {}),
-            width: `${width}px`,
-            height: `${height}px`,
+            ...style,
           },
         },
       },
     });
   }, [config, dispatch, selectedPath]);
 
-  const flushPendingSize = useCallback(() => {
+  const flushPendingBoxStyle = useCallback(() => {
     frameRef.current = null;
-    const pending = pendingSizeRef.current;
-    pendingSizeRef.current = null;
-    if (pending) updateSelectedSize(pending.width, pending.height);
-  }, [updateSelectedSize]);
+    const pending = pendingBoxStyleRef.current;
+    pendingBoxStyleRef.current = null;
+    if (pending) updateSelectedBox(pending);
+  }, [updateSelectedBox]);
 
-  const scheduleSelectedSize = useCallback((width: number, height: number) => {
-    pendingSizeRef.current = { width, height };
+  const scheduleSelectedBox = useCallback((style: PendingBoxStyle) => {
+    pendingBoxStyleRef.current = style;
     if (frameRef.current === null) {
-      frameRef.current = window.requestAnimationFrame(flushPendingSize);
+      frameRef.current = window.requestAnimationFrame(flushPendingBoxStyle);
     }
-  }, [flushPendingSize]);
+  }, [flushPendingBoxStyle]);
 
-  const startResize = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+  const startResize = useCallback((direction: ResizeDirection, event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!selectedPath || !containerRef.current) return;
     const el = containerRef.current.querySelector<HTMLElement>(
       `[data-morph-path="${CSS.escape(selectedPath)}"]`,
     );
-    if (!el || !supportsBoxResize(el)) return;
+    if (!el || !getBoxResizeDirections(el).includes(direction)) return;
 
     event.preventDefault();
     event.stopPropagation();
 
     const startRect = el.getBoundingClientRect();
+    const computed = getComputedStyle(el);
+    const isPositioned = computed.position !== 'static';
     const bounds = getResizeBounds(el, startRect);
     resizeStateRef.current = {
+      direction,
       startX: event.clientX,
       startY: event.clientY,
       startWidth: startRect.width,
       startHeight: startRect.height,
+      horizontalOffsetProp: isPositioned ? 'left' : 'marginLeft',
+      verticalOffsetProp: isPositioned ? 'top' : 'marginTop',
+      startHorizontalOffset: isPositioned
+        ? getNumericStyleValue(computed.left, el.offsetLeft)
+        : getNumericStyleValue(computed.marginLeft, 0),
+      startVerticalOffset: isPositioned
+        ? getNumericStyleValue(computed.top, el.offsetTop)
+        : getNumericStyleValue(computed.marginTop, 0),
       ...bounds,
     };
 
     const previousCursor = document.documentElement.style.cursor;
     const previousUserSelect = document.documentElement.style.userSelect;
-    document.documentElement.style.cursor = 'nwse-resize';
+    document.documentElement.style.cursor = getResizeCursor(direction);
     document.documentElement.style.userSelect = 'none';
 
     const handlePointerMove = (moveEvent: PointerEvent) => {
@@ -182,18 +248,55 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
       if (!resizeState) return;
       moveEvent.preventDefault();
 
-      const width = Math.round(clamp(
-        resizeState.startWidth + moveEvent.clientX - resizeState.startX,
-        resizeState.minWidth,
-        resizeState.maxWidth,
-      ));
-      const height = Math.round(clamp(
-        resizeState.startHeight + moveEvent.clientY - resizeState.startY,
-        resizeState.minHeight,
-        resizeState.maxHeight,
-      ));
+      const dx = moveEvent.clientX - resizeState.startX;
+      const dy = moveEvent.clientY - resizeState.startY;
+      const nextStyle: PendingBoxStyle = {};
 
-      scheduleSelectedSize(width, height);
+      if (resizeState.direction.includes('e')) {
+        const width = Math.round(clamp(
+          resizeState.startWidth + dx,
+          resizeState.minWidth,
+          resizeState.maxWidthEast,
+        ));
+        nextStyle.width = `${width}px`;
+      }
+
+      if (resizeState.direction.includes('w')) {
+        const width = Math.round(clamp(
+          resizeState.startWidth - dx,
+          resizeState.minWidth,
+          resizeState.maxWidthWest,
+        ));
+        const appliedDelta = resizeState.startWidth - width;
+        nextStyle.width = `${width}px`;
+        nextStyle[resizeState.horizontalOffsetProp] = `${Math.round(
+          resizeState.startHorizontalOffset + appliedDelta,
+        )}px`;
+      }
+
+      if (resizeState.direction.includes('s')) {
+        const height = Math.round(clamp(
+          resizeState.startHeight + dy,
+          resizeState.minHeight,
+          resizeState.maxHeightSouth,
+        ));
+        nextStyle.height = `${height}px`;
+      }
+
+      if (resizeState.direction.includes('n')) {
+        const height = Math.round(clamp(
+          resizeState.startHeight - dy,
+          resizeState.minHeight,
+          resizeState.maxHeightNorth,
+        ));
+        const appliedDelta = resizeState.startHeight - height;
+        nextStyle.height = `${height}px`;
+        nextStyle[resizeState.verticalOffsetProp] = `${Math.round(
+          resizeState.startVerticalOffset + appliedDelta,
+        )}px`;
+      }
+
+      scheduleSelectedBox(nextStyle);
     };
 
     const finishResize = () => {
@@ -201,9 +304,9 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
         window.cancelAnimationFrame(frameRef.current);
         frameRef.current = null;
       }
-      const pending = pendingSizeRef.current;
-      pendingSizeRef.current = null;
-      if (pending) updateSelectedSize(pending.width, pending.height);
+      const pending = pendingBoxStyleRef.current;
+      pendingBoxStyleRef.current = null;
+      if (pending) updateSelectedBox(pending);
       resizeStateRef.current = null;
       document.documentElement.style.cursor = previousCursor;
       document.documentElement.style.userSelect = previousUserSelect;
@@ -215,7 +318,7 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', finishResize);
     window.addEventListener('pointercancel', finishResize);
-  }, [containerRef, scheduleSelectedSize, selectedPath, updateSelectedSize]);
+  }, [containerRef, scheduleSelectedBox, selectedPath, updateSelectedBox]);
 
   useEffect(() => {
     updateRect();
@@ -253,14 +356,17 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
         height: rect.height,
       }}
     >
-      {canResize && (
-        <button
-          type="button"
-          className="morph-editor-resize-handle"
-          onPointerDown={startResize}
-          aria-label="Resize element"
-          title="Resize element"
-        />
+      {resizeDirections.length > 0 && (
+        resizeDirections.map((direction) => (
+          <button
+            key={direction}
+            type="button"
+            className={`morph-editor-resize-handle morph-editor-resize-handle--${direction}`}
+            onPointerDown={(event) => startResize(direction, event)}
+            aria-label={`Resize element ${direction}`}
+            title="Resize element"
+          />
+        ))
       )}
     </div>
   );

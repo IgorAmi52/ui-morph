@@ -43,6 +43,13 @@ The editor also applies a small set of implicit defaults. Headings (`h1`-`h6`) a
 <h1 data-morph-enable="resize">Dashboard</h1>
 ```
 
+Box resizing is controlled from the selected element outline. The editor shows edge and corner handles for supported non-inline elements when resize is enabled:
+
+```tsx
+<article data-morph-resize="box">...</article>
+<section data-morph-enable="resize">...</section>
+```
+
 ---
 
 ## Current Frontend Contract
@@ -306,12 +313,13 @@ Current editor components:
 - `DndSortManager.tsx`: native pointer-based sibling reorder.
 - `DragHandleLayer.tsx`: generated drag handles.
 - `DropIndicator.tsx`: visual drop marker.
-- `SelectionOverlay.tsx`: selected element outline and drag resize handle.
+- `SelectionOverlay.tsx`: selected element outline and edge/corner drag resize handles.
 - `PropertyPanel.tsx`: manual controls and AI prompt tab.
 - `ColorPicker.tsx`, `SizeControl.tsx`, `VisibilityToggle.tsx`, `AiPromptInput.tsx`.
 
 Layout reorder is applied through CSS `order`, not DOM node moves. This avoids fighting React reconciliation.
-Element width and height resize is controlled by a lightweight bottom-right drag handle on the selected outline. The handle stores bounded `style.width` and `style.height` values, clamps growth to the parent/viewport where predictable, and relies on normal document flow to move siblings instead of running a global collision solver.
+Element width and height resize is controlled by lightweight edge and corner handles on the selected outline. Handles store bounded `style.width` and `style.height` values. North/west handles also adjust `top`/`left` for positioned elements, or `marginTop`/`marginLeft` for normal-flow elements when that can be done without creating negative margins. Resize clamps to the parent/viewport where predictable instead of running a global collision solver.
+The property panel automatically moves between the left and right side of the viewport to avoid covering the selected element edge where possible.
 
 No external runtime UI dependencies are required by the library.
 
@@ -345,7 +353,7 @@ Frontend:
 - Edit mode opens on first click after page load.
 - Hide/show updates the preview.
 - Color/background/font-size/width/height changes update the preview.
-- Drag resizing clamps to sane bounds and cannot overflow the selected element's parent in common block/flex/grid layouts.
+- Edge/corner drag resizing clamps to sane bounds and parent/viewport limits where predictable.
 - Drag reorder updates visual order without moving DOM nodes.
 - Save calls backend when `apiUrl` is provided.
 - No config is persisted when `apiUrl` is omitted.

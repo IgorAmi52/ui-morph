@@ -12,6 +12,7 @@ import {
 } from './capabilities';
 
 type Tab = 'manual' | 'ai';
+type PanelSide = 'left' | 'right';
 
 interface Defaults {
   color: string;
@@ -22,6 +23,7 @@ interface Defaults {
 interface SelectedElementState {
   defaults: Defaults;
   disabledCapabilities: Set<MorphCapability>;
+  panelSide: PanelSide;
 }
 
 const EMPTY_DEFAULTS: Defaults = {
@@ -32,13 +34,56 @@ const EMPTY_DEFAULTS: Defaults = {
 const EMPTY_STATE: SelectedElementState = {
   defaults: EMPTY_DEFAULTS,
   disabledCapabilities: new Set(),
+  panelSide: 'right',
 };
 
-function rgbToHex(rgb: string): string {
-  const match = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-  if (!match) return rgb;
-  const [, r, g, b] = match;
-  return '#' + [r, g, b].map(c => Number(c).toString(16).padStart(2, '0')).join('');
+function colorChannelToHex(channel: string): string {
+  return Math.round(Number(channel)).toString(16).padStart(2, '0');
+}
+
+function parseAlpha(alpha: string | undefined): number {
+  if (!alpha) return 1;
+  if (alpha.endsWith('%')) return Number(alpha.slice(0, -1)) / 100;
+  return Number(alpha);
+}
+
+function rgbToHex(rgb: string): string | null {
+  const commaMatch = rgb.match(
+    /^rgba?\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)(?:\s*,\s*([\d.]+%?))?\s*\)$/,
+  );
+  const spaceMatch = rgb.match(
+    /^rgba?\(\s*(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)(?:\s*\/\s*([\d.]+%?))?\s*\)$/,
+  );
+  const match = commaMatch ?? spaceMatch;
+  if (!match) return null;
+
+  const [, r, g, b, alpha] = match;
+  if (parseAlpha(alpha) === 0) return null;
+  return `#${[r, g, b].map(colorChannelToHex).join('')}`;
+}
+
+function cssColorToHex(color: string, fallback: string): string {
+  if (/^#[0-9a-fA-F]{6}$/.test(color)) return color.toLowerCase();
+  return rgbToHex(color) ?? fallback;
+}
+
+function resolveEffectiveBackgroundHex(el: HTMLElement): string {
+  let current: HTMLElement | null = el;
+  while (current) {
+    const hex = rgbToHex(getComputedStyle(current).backgroundColor);
+    if (hex) return hex;
+    current = current.parentElement;
+  }
+  return '#ffffff';
+}
+
+function resolvePanelSide(el: HTMLElement): PanelSide {
+  const panelWidth = 340;
+  const rect = el.getBoundingClientRect();
+  const rightPanelLeft = window.innerWidth - panelWidth;
+  const rightPanelWouldCoverSelection = rect.right > rightPanelLeft;
+  const hasRoomOnLeft = rect.left > panelWidth;
+  return rightPanelWouldCoverSelection && hasRoomOnLeft ? 'left' : 'right';
 }
 
 function readSelectedElementState(path: string): SelectedElementState {
@@ -47,11 +92,12 @@ function readSelectedElementState(path: string): SelectedElementState {
   const computed = getComputedStyle(el);
   return {
     defaults: {
-      color: rgbToHex(computed.color),
-      bg: rgbToHex(computed.backgroundColor),
+      color: cssColorToHex(computed.color, '#000000'),
+      bg: resolveEffectiveBackgroundHex(el),
       fontSize: computed.fontSize,
     },
     disabledCapabilities: getDisabledCapabilities(el),
+    panelSide: resolvePanelSide(el),
   };
 }
 
@@ -61,17 +107,32 @@ export function PropertyPanel() {
   const [elementState, setElementState] = useState<SelectedElementState>(EMPTY_STATE);
 
   const override = selectedPath ? config[selectedPath] ?? {} : {};
-  const { defaults, disabledCapabilities } = elementState;
+  const { defaults, disabledCapabilities, panelSide } = elementState;
   const canChangeVisibility = isCapabilityEnabled(disabledCapabilities, 'visibility');
   const canChangeTextColor = isCapabilityEnabled(disabledCapabilities, 'textColor');
   const canChangeBackground = isCapabilityEnabled(disabledCapabilities, 'background');
   const canResize = isCapabilityEnabled(disabledCapabilities, 'resize');
   const canUseAi = isCapabilityEnabled(disabledCapabilities, 'ai');
-  const hasManualControls = canChangeVisibility || canChangeTextColor || canChangeBackground || canResize;
+  const hasManualControls = canChangeVisibility ||
+    canChangeTextColor ||
+    canChangeBackground ||
+    canResize;
 
   useEffect(() => {
     if (!selectedPath) return;
-    setElementState(readSelectedElementState(selectedPath));
+
+    const updateSelectedElementState = () => {
+      setElementState(readSelectedElementState(selectedPath));
+    };
+
+    updateSelectedElementState();
+    window.addEventListener('resize', updateSelectedElementState);
+    window.addEventListener('scroll', updateSelectedElementState, true);
+
+    return () => {
+      window.removeEventListener('resize', updateSelectedElementState);
+      window.removeEventListener('scroll', updateSelectedElementState, true);
+    };
   }, [selectedPath]);
 
   const updateOverride = useCallback(
@@ -109,7 +170,7 @@ export function PropertyPanel() {
   if (!selectedPath) return null;
 
   return (
-    <div data-morph-editor className="morph-editor-panel">
+    <div data-morph-editor className={`morph-editor-panel morph-editor-panel--${panelSide}`}>
       <div className="morph-editor-panel__header">
         <div className="morph-editor-panel__title">Element settings</div>
         <button

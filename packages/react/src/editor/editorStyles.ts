@@ -11,7 +11,6 @@ const EDITOR_STYLES = `
 .morph-editor-panel {
   position: fixed;
   top: 0;
-  right: 0;
   width: 320px;
   height: 100vh;
   background: #fff;
@@ -22,6 +21,17 @@ const EDITOR_STYLES = `
   box-shadow: -4px 0 12px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
+}
+
+.morph-editor-panel--right {
+  right: 0;
+}
+
+.morph-editor-panel--left {
+  left: 0;
+  border-left: none;
+  border-right: 1px solid #e2e8f0;
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.08);
 }
 
 .morph-editor-panel__header {
@@ -416,10 +426,6 @@ const EDITOR_STYLES = `
 
 .morph-editor-resize-handle {
   position: absolute;
-  right: -7px;
-  bottom: -7px;
-  width: 12px;
-  height: 12px;
   padding: 0;
   border: 2px solid #fff;
   border-radius: 3px;
@@ -432,6 +438,72 @@ const EDITOR_STYLES = `
 
 .morph-editor-resize-handle:hover {
   background: #0e7490;
+}
+
+.morph-editor-resize-handle--n,
+.morph-editor-resize-handle--s {
+  left: 50%;
+  width: 36px;
+  height: 10px;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.morph-editor-resize-handle--n {
+  top: -6px;
+}
+
+.morph-editor-resize-handle--s {
+  bottom: -6px;
+}
+
+.morph-editor-resize-handle--e,
+.morph-editor-resize-handle--w {
+  top: 50%;
+  width: 10px;
+  height: 36px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.morph-editor-resize-handle--e {
+  right: -6px;
+}
+
+.morph-editor-resize-handle--w {
+  left: -6px;
+}
+
+.morph-editor-resize-handle--ne,
+.morph-editor-resize-handle--nw,
+.morph-editor-resize-handle--se,
+.morph-editor-resize-handle--sw {
+  width: 12px;
+  height: 12px;
+}
+
+.morph-editor-resize-handle--ne {
+  top: -7px;
+  right: -7px;
+  cursor: nesw-resize;
+}
+
+.morph-editor-resize-handle--nw {
+  top: -7px;
+  left: -7px;
+  cursor: nwse-resize;
+}
+
+.morph-editor-resize-handle--se {
+  right: -7px;
+  bottom: -7px;
+  cursor: nwse-resize;
+}
+
+.morph-editor-resize-handle--sw {
+  bottom: -7px;
+  left: -7px;
+  cursor: nesw-resize;
 }
 `;
 
