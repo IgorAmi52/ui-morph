@@ -1,0 +1,11 @@
+[project]
+name = "ui-morph-gepa-opt"
+version = "0.1.0"
+description = "GEPA prompt optimization for ui-morph layout agent"
+requires-python = ">=3.10"
+dependencies = [
+  "gepa[full]>=0.1.0",
+]
+
+[project.scripts]
+optimize-layout = "optimize_layout:main"

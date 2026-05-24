@@ -26,8 +26,13 @@ ui-morph/
 | `pnpm dev:demo` | Run demo at Vite dev server |
 | `pnpm test` | API + react unit tests |
 | `pnpm typecheck` | Typecheck all packages |
+| `pnpm eval:agent` | Golden-scenario layout agent eval (requires `GEMINI_API_KEY`) |
+| `pnpm eval:agent:score` | Same eval, JSON stdout (for GEPA / CI) |
+| `pnpm gepa:optimize` | GEPA prompt optimization (`tools/gepa-opt`, see README there) |
 
-Set `GEMINI_API_KEY` in `packages/api/.env` for the layout agent.
+Set `GEMINI_API_KEY` in `packages/api/.env` for the layout agent and eval/GEPA runs.
+
+**Prompt optimization:** Static instructions live in `packages/api/src/agent/layoutInstructions.ts` (`LAYOUT_AGENT_INSTRUCTIONS_VERSION`). Golden scenarios in `tools/agent-eval/scenarios/` (includes harder cases: `swap-by-name`, `reorder-four-sections`, `pick-subtitle`, etc.). Run train eval; if below 100%, run `pnpm gepa:optimize` once and validate on val before merging. See `tools/gepa-opt/README.md`.
 
 Node ≥18, pnpm ≥9.
 

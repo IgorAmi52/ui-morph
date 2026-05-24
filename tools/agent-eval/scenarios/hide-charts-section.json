@@ -1,0 +1,56 @@
+{
+  "id": "hide-charts-section",
+  "split": "train",
+  "description": "Hide a section by its heading label",
+  "message": "Hide the charts section",
+  "config": {},
+  "snapshot": {
+    "viewId": "dashboard",
+    "nodeCount": 4,
+    "nodes": [
+      {
+        "path": "morph.section:0",
+        "tag": "section",
+        "segment": "section:0",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.section:0.h2:0",
+            "tag": "h2",
+            "segment": "h2:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Recent claims",
+            "children": []
+          }
+        ]
+      },
+      {
+        "path": "morph.section:1",
+        "tag": "section",
+        "segment": "section:1",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.section:1.h2:0",
+            "tag": "h2",
+            "segment": "h2:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Charts",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "toolsSucceeded": true,
+    "appliedToolsIncludes": ["set_element_override"],
+    "configHas": {
+      "morph.section:1": { "hidden": true }
+    }
+  }
+}

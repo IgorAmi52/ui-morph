@@ -1,0 +1,7 @@
+{
+  "version": "v1",
+  "split": "val",
+  "meanScore": 0.95,
+  "tolerance": 0.05,
+  "note": "Val golden scenarios; train may vary (~94–100%) due to LLM flakiness on tool calls."
+}

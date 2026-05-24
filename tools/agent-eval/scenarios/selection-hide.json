@@ -1,0 +1,40 @@
+{
+  "id": "selection-hide",
+  "split": "train",
+  "description": "Hide the selected element",
+  "message": "Hide this",
+  "selectedPath": "morph.div:0.h1:0",
+  "selectionLabel": "Dashboard title",
+  "config": {},
+  "snapshot": {
+    "viewId": "dashboard",
+    "nodeCount": 2,
+    "nodes": [
+      {
+        "path": "morph.div:0",
+        "tag": "div",
+        "segment": "div:0",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.div:0.h1:0",
+            "tag": "h1",
+            "segment": "h1:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Dashboard",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "toolsSucceeded": true,
+    "configHas": {
+      "morph.div:0.h1:0": { "hidden": true }
+    },
+    "replyMustNotMatch": ["selectedPath", "morph.div:0.h1:0"]
+  }
+}

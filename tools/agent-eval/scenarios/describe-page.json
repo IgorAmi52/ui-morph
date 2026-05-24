@@ -1,0 +1,36 @@
+{
+  "id": "describe-page",
+  "split": "val",
+  "description": "Answer a question without editing",
+  "message": "What is the main heading on this page?",
+  "config": {},
+  "snapshot": {
+    "viewId": "dashboard",
+    "nodeCount": 2,
+    "nodes": [
+      {
+        "path": "morph.div:0",
+        "tag": "div",
+        "segment": "div:0",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.div:0.h1:0",
+            "tag": "h1",
+            "segment": "h1:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Claims Overview",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "noProposedConfig": true,
+    "replyMustMatch": ["Claims"],
+    "replyMustNotMatch": ["snapshot", "morph.div", "parentPath"]
+  }
+}

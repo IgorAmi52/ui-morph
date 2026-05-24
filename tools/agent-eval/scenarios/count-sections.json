@@ -1,0 +1,72 @@
+{
+  "id": "count-sections",
+  "split": "val",
+  "description": "Answer a counting question without editing",
+  "message": "How many main sections are on this page?",
+  "config": {},
+  "snapshot": {
+    "viewId": "dashboard",
+    "rootPath": "morph",
+    "nodeCount": 6,
+    "nodes": [
+      {
+        "path": "morph.section:0",
+        "tag": "section",
+        "segment": "section:0",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.section:0.h2:0",
+            "tag": "h2",
+            "segment": "h2:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Claims",
+            "children": []
+          }
+        ]
+      },
+      {
+        "path": "morph.section:1",
+        "tag": "section",
+        "segment": "section:1",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.section:1.h2:0",
+            "tag": "h2",
+            "segment": "h2:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "KPIs",
+            "children": []
+          }
+        ]
+      },
+      {
+        "path": "morph.section:2",
+        "tag": "section",
+        "segment": "section:2",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.section:2.h2:0",
+            "tag": "h2",
+            "segment": "h2:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Charts",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "noProposedConfig": true,
+    "replyMustMatch": ["3"]
+  }
+}

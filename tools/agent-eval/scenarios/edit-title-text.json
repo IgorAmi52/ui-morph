@@ -1,0 +1,38 @@
+{
+  "id": "edit-title-text",
+  "split": "val",
+  "description": "Change text on a text leaf",
+  "message": "Change the title text to Welcome back",
+  "config": {},
+  "snapshot": {
+    "viewId": "dashboard",
+    "nodeCount": 2,
+    "nodes": [
+      {
+        "path": "morph.div:0",
+        "tag": "div",
+        "segment": "div:0",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.div:0.h1:0",
+            "tag": "h1",
+            "segment": "h1:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Hello",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "toolsSucceeded": true,
+    "appliedToolsIncludes": ["set_element_override"],
+    "configHas": {
+      "morph.div:0.h1:0": { "text": "Welcome back" }
+    }
+  }
+}
