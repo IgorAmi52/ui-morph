@@ -2,9 +2,9 @@
 - `node`  
 
 # Run test app  
-`cd test-app`  
-`npm install`  
-`npm run dev`
+1. `cd test-app`  
+2. `npm install`    
+3. `npm run dev`    
 
 
 
