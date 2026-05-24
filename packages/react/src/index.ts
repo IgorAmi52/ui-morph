@@ -16,6 +16,17 @@ export type {
   AgentMessageRequest,
   AgentMessageResponse,
   ConfigChangeSummary,
+  AgentPageRequest,
+  AgentPageResponse,
+  GeneratedPage,
+  GeneratedPageDefinition,
+  GeneratedPageItem,
+  GeneratedPageMetadata,
+  GeneratedPageSection,
+  GeneratedPageSourceSnapshot,
+  GeneratedPageSourceSummary,
+  GeneratedPageVisualFragment,
 } from './types';
 export { serializeLayoutSnapshot } from './agent/serializeLayoutSnapshot';
+export { createPage, createPageStorageAdapter, generatePage, getPage } from './config/pageClient';
 export { createShare, createShareStorageAdapter, getShare } from './config/shareClient';

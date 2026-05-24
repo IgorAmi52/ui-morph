@@ -1,16 +1,22 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
-import type { MorphProps, MorphConfig, MorphMode, ShareMetadata, StorageAdapter } from './types';
+import type { GeneratedPage, MorphProps, MorphConfig, MorphMode, ShareMetadata, StorageAdapter } from './types';
 import { ConfigProvider, useMorphContext } from './config/ConfigContext';
 import { createAdapter } from './config/createAdapter';
 import { resolveSessionId } from './config/clientSession';
 import { subscribeToRouteChanges, useRouteScope } from './config/routeScope';
+import { createPageStorageAdapter, getPage } from './config/pageClient';
+import { readPageSnapshots, upsertPageSnapshot } from './config/pageSnapshots';
 import { createShare, createShareStorageAdapter, getShare } from './config/shareClient';
+import { serializeLayoutSnapshot } from './agent/serializeLayoutSnapshot';
+import { CreatePageModal } from './editor/CreatePageModal';
 import { EditModeProvider } from './editor/EditModeProvider';
+import { GeneratedPageView } from './editor/GeneratedPageView';
 import { MorphToggleButton } from './editor/MorphToggleButton';
 import { decoratePaths, applyDomOverrides, cleanDomOverrides } from './tree/domDecorator';
 
 const EMPTY_CONFIG: MorphConfig = {};
 const SHARE_QUERY_PARAM = 'uiMorphShare';
+const PAGE_QUERY_PARAM = 'uiMorphPage';
 
 interface ShareRouteState {
   shareId: string | null;
@@ -18,26 +24,41 @@ interface ShareRouteState {
   loading: boolean;
 }
 
-function shareIdFromLocation(): string | null {
+interface PageRouteState {
+  pageId: string | null;
+  page: GeneratedPage | null;
+  loading: boolean;
+}
+
+function queryParamFromLocation(param: string): string | null {
   if (typeof window === 'undefined') return null;
   const url = new URL(window.location.href);
-  const fromSearch = url.searchParams.get(SHARE_QUERY_PARAM);
+  const fromSearch = url.searchParams.get(param);
   if (fromSearch?.trim()) return fromSearch.trim();
 
   const hashQueryIndex = url.hash.indexOf('?');
   if (hashQueryIndex === -1) return null;
   const hashParams = new URLSearchParams(url.hash.slice(hashQueryIndex + 1));
-  const fromHash = hashParams.get(SHARE_QUERY_PARAM);
+  const fromHash = hashParams.get(param);
   return fromHash?.trim() || null;
 }
 
-function removeShareParamFromHash(hash: string): string {
+function shareIdFromLocation(): string | null {
+  return queryParamFromLocation(SHARE_QUERY_PARAM);
+}
+
+function pageIdFromLocation(): string | null {
+  return queryParamFromLocation(PAGE_QUERY_PARAM);
+}
+
+function removeMorphParamsFromHash(hash: string): string {
   const queryIndex = hash.indexOf('?');
   if (queryIndex === -1) return hash;
   const path = hash.slice(0, queryIndex);
   const query = hash.slice(queryIndex + 1);
   const params = new URLSearchParams(query);
   params.delete(SHARE_QUERY_PARAM);
+  params.delete(PAGE_QUERY_PARAM);
   const nextQuery = params.toString();
   return nextQuery ? `${path}?${nextQuery}` : path;
 }
@@ -46,7 +67,8 @@ function currentSourcePath(): string | undefined {
   if (typeof window === 'undefined') return undefined;
   const url = new URL(window.location.href);
   url.searchParams.delete(SHARE_QUERY_PARAM);
-  const hash = removeShareParamFromHash(url.hash);
+  url.searchParams.delete(PAGE_QUERY_PARAM);
+  const hash = removeMorphParamsFromHash(url.hash);
   return `${url.pathname}${url.search}${hash}`;
 }
 
@@ -54,6 +76,13 @@ function buildShareUrl(shareId: string, sourcePath?: string): string {
   if (typeof window === 'undefined') return sourcePath ?? '';
   const url = new URL(sourcePath || currentSourcePath() || '/', window.location.origin);
   url.searchParams.set(SHARE_QUERY_PARAM, shareId);
+  return url.toString();
+}
+
+function buildPageUrl(pageId: string): string {
+  if (typeof window === 'undefined') return '';
+  const url = new URL(currentSourcePath() || '/', window.location.origin);
+  url.searchParams.set(PAGE_QUERY_PARAM, pageId);
   return url.toString();
 }
 
@@ -102,6 +131,44 @@ function useShareRoute(apiUrl?: string, onError?: (error: Error) => void): Share
   return state;
 }
 
+function usePageRoute(apiUrl?: string, onError?: (error: Error) => void): PageRouteState {
+  const [pageId, setPageId] = useState(pageIdFromLocation);
+  const [state, setState] = useState<PageRouteState>(() => ({
+    pageId,
+    page: null,
+    loading: Boolean(apiUrl && pageId),
+  }));
+
+  useEffect(() => subscribeToRouteChanges(() => {
+    setPageId(pageIdFromLocation());
+  }), []);
+
+  useEffect(() => {
+    if (!apiUrl || !pageId) {
+      setState({ pageId, page: null, loading: false });
+      return undefined;
+    }
+
+    let cancelled = false;
+    setState({ pageId, page: null, loading: true });
+
+    void getPage(apiUrl, pageId)
+      .then((page) => {
+        if (!cancelled) setState({ pageId, page, loading: false });
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setState({ pageId, page: null, loading: false });
+          onError?.(err instanceof Error ? err : new Error(String(err)));
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [apiUrl, onError, pageId]);
+
+  return state;
+}
+
 export function Morph({
   userId,
   viewId: viewIdProp,
@@ -120,34 +187,57 @@ export function Morph({
   const { viewId, routeId } = useRouteScope(viewIdProp, routeIdProp);
   const sessionId = useState(() => resolveSessionId(sessionIdProp))[0];
   const shareRoute = useShareRoute(apiUrl, onError);
+  const pageRoute = usePageRoute(apiUrl, onError);
   const sharedAdapter = useMemo(
     () => (apiUrl && shareRoute.share
       ? createShareStorageAdapter(apiUrl, shareRoute.share.shareId, sessionId)
       : null),
     [apiUrl, sessionId, shareRoute.share],
   );
+  const pageAdapter = useMemo(
+    () => (apiUrl && pageRoute.page
+      ? createPageStorageAdapter(apiUrl, pageRoute.page.pageId)
+      : null),
+    [apiUrl, pageRoute.page],
+  );
   const sourceShareId = shareRoute.shareId;
+  const sourcePageId = pageRoute.pageId;
   const isSharedRoute = Boolean(apiUrl && sourceShareId);
+  const isPageRoute = Boolean(apiUrl && sourcePageId);
 
   if (isSharedRoute && (shareRoute.loading || !shareRoute.share || !sharedAdapter)) {
     return fallback ? <>{fallback}</> : null;
   }
+  if (isPageRoute && (pageRoute.loading || !pageRoute.page || !pageAdapter)) {
+    return fallback ? <>{fallback}</> : null;
+  }
+
+  const scopedUserId = pageRoute.page
+    ? `page:${pageRoute.page.pageId}`
+    : shareRoute.share
+      ? `share:${shareRoute.share.shareId}`
+      : userId;
+  const scopedViewId = pageRoute.page?.viewId ?? shareRoute.share?.viewId ?? viewId;
+  const scopedRouteId = pageRoute.page?.routeId ?? shareRoute.share?.routeId ?? routeId;
+  const scopedChildren = pageRoute.page
+    ? <GeneratedPageView definition={pageRoute.page.definition} />
+    : children;
 
   return (
     <MorphScoped
-      userId={shareRoute.share ? `share:${shareRoute.share.shareId}` : userId}
-      viewId={shareRoute.share?.viewId ?? viewId}
+      userId={scopedUserId}
+      viewId={scopedViewId}
       sessionId={sessionId}
-      routeId={shareRoute.share?.routeId ?? routeId}
+      routeId={scopedRouteId}
       apiUrl={apiUrl}
-      storageAdapter={sharedAdapter ?? storageAdapter}
+      storageAdapter={pageAdapter ?? sharedAdapter ?? storageAdapter}
       mode={mode}
       editable={editable}
       onShare={onShare}
       onSave={onSave}
       onError={onError}
       fallback={fallback}
-      children={children}
+      children={scopedChildren}
     />
   );
 }
@@ -259,6 +349,39 @@ function MorphInner({
     useMorphContext();
   const [sharing, setSharing] = useState(false);
   const [shareNotice, setShareNotice] = useState<{ message: string; url?: string } | null>(null);
+  const [pageModalOpen, setPageModalOpen] = useState(false);
+  const [pageSources, setPageSources] = useState(() => readPageSnapshots(userId, sessionId));
+
+  const captureCurrentPage = useCallback(() => {
+    const container = containerRef.current;
+    if (!container || userId.startsWith('page:') || userId.startsWith('share:')) {
+      return readPageSnapshots(userId, sessionId);
+    }
+    const snapshotContainer =
+      container.querySelector<HTMLElement>('[data-morph-passthrough]') ?? container;
+    const snapshot = serializeLayoutSnapshot(snapshotContainer, {
+      viewId,
+      config,
+    });
+    return upsertPageSnapshot(userId, sessionId, {
+      viewId,
+      routeId,
+      path: currentSourcePath() ?? '/',
+      snapshot,
+      container: snapshotContainer,
+    });
+  }, [config, routeId, sessionId, userId, viewId]);
+
+  const handleOpenPageComposer = useCallback(() => {
+    setPageSources(captureCurrentPage());
+    setPageModalOpen(true);
+  }, [captureCurrentPage]);
+
+  const handlePageCreated = useCallback((pageId: string) => {
+    setPageModalOpen(false);
+    if (typeof window === 'undefined') return;
+    window.history.pushState({}, '', buildPageUrl(pageId));
+  }, []);
 
   const handleShare = useCallback(async () => {
     if (sharing) return;
@@ -302,6 +425,14 @@ function MorphInner({
     if (mode === 'view') selectElement(null);
   }, [mode, selectElement]);
 
+  useEffect(() => {
+    if (!editable || mode !== 'view') return undefined;
+    const id = window.setTimeout(() => {
+      setPageSources(captureCurrentPage());
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [captureCurrentPage, editable, mode]);
+
   useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -342,8 +473,22 @@ function MorphInner({
       {mode === 'view' && editable && toggleMode && (
         <MorphToggleButton
           onClick={toggleMode}
+          onCreatePage={apiUrl ? handleOpenPageComposer : undefined}
           onShare={(onShare || apiUrl) ? () => void handleShare() : undefined}
           sharing={sharing}
+        />
+      )}
+      {pageModalOpen && apiUrl && (
+        <CreatePageModal
+          apiUrl={apiUrl}
+          userId={userId}
+          viewId={viewId}
+          sessionId={sessionId}
+          routeId={routeId}
+          sources={pageSources}
+          onClose={() => setPageModalOpen(false)}
+          onCreated={handlePageCreated}
+          onError={onError}
         />
       )}
       {shareNotice && (

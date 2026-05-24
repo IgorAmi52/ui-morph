@@ -202,3 +202,83 @@ export interface AgentSuggestionsRequest {
 export interface AgentSuggestionsResponse {
   suggestions: string[];
 }
+
+export interface GeneratedPageItem {
+  id: string;
+  label: string;
+  text?: string;
+  value?: string;
+  kind: 'text' | 'metric' | 'list';
+}
+
+export interface GeneratedPageSection {
+  id: string;
+  title: string;
+  sourceRouteId?: string;
+  visualHtml?: string;
+  items: GeneratedPageItem[];
+}
+
+export interface GeneratedPageDefinition {
+  title: string;
+  description?: string;
+  sections: GeneratedPageSection[];
+}
+
+export interface GeneratedPageVisualFragment {
+  id: string;
+  label: string;
+  routeId: string;
+  path: string;
+  html: string;
+  text?: string;
+}
+
+export interface GeneratedPageSourceSnapshot {
+  viewId: string;
+  routeId: string;
+  path: string;
+  label: string;
+  capturedAt: string;
+  snapshot: LayoutSnapshot;
+  visualFragments?: GeneratedPageVisualFragment[];
+}
+
+export interface GeneratedPageSourceSummary {
+  viewId: string;
+  routeId: string;
+  path: string;
+  label: string;
+  capturedAt: string;
+}
+
+export interface AgentPageRequest {
+  userId: string;
+  viewId: string;
+  sessionId: string;
+  routeId: string;
+  prompt: string;
+  sources: GeneratedPageSourceSnapshot[];
+}
+
+export interface AgentPageResponse {
+  definition: GeneratedPageDefinition;
+}
+
+export interface GeneratedPageMetadata {
+  pageId: string;
+  userId: string;
+  sessionId: string;
+  viewId: string;
+  routeId: string;
+  title: string;
+  prompt: string;
+  sources: GeneratedPageSourceSummary[];
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GeneratedPage extends GeneratedPageMetadata {
+  definition: GeneratedPageDefinition;
+}

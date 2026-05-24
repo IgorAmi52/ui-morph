@@ -1,6 +1,8 @@
 interface MorphToggleButtonProps {
   onClick: () => void;
+  onCreatePage?: () => void;
   onShare?: () => void;
+  creatingPage?: boolean;
   sharing?: boolean;
 }
 
@@ -38,9 +40,38 @@ const iconButtonStyle: React.CSSProperties = {
   padding: 0,
 };
 
-export function MorphToggleButton({ onClick, onShare, sharing = false }: MorphToggleButtonProps) {
+export function MorphToggleButton({
+  onClick,
+  onCreatePage,
+  onShare,
+  creatingPage = false,
+  sharing = false,
+}: MorphToggleButtonProps) {
   return (
     <div data-morph-editor style={groupStyle}>
+      {onCreatePage && (
+        <button
+          type="button"
+          onClick={onCreatePage}
+          disabled={creatingPage}
+          style={{ ...iconButtonStyle, opacity: creatingPage ? 0.5 : 1 }}
+          aria-label="Create page"
+          title="Create page"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+      )}
       {onShare && (
         <button
           type="button"
