@@ -46,6 +46,13 @@ export function decoratePaths(container: HTMLElement, rootPath: string): void {
 
 const ORIGINAL_STYLE_ATTR = 'data-morph-original-style';
 const ORIGINAL_DISPLAY_ATTR = 'data-morph-original-display';
+const ORIGINAL_TEXT_ATTR = 'data-morph-original-text';
+
+function isTextLeaf(el: HTMLElement): boolean {
+  return Array.from(el.childNodes).every(
+    (node) => node.nodeType === Node.TEXT_NODE || (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).tagName === 'BR'),
+  );
+}
 
 function toCssPropertyName(prop: string): string {
   if (prop.startsWith('--')) return prop;
@@ -78,6 +85,12 @@ export function cleanDomOverrides(container: HTMLElement): void {
     if (origDisplay !== null) {
       el.style.display = origDisplay;
       el.removeAttribute(ORIGINAL_DISPLAY_ATTR);
+    }
+
+    const origText = el.getAttribute(ORIGINAL_TEXT_ATTR);
+    if (origText !== null) {
+      el.textContent = origText;
+      el.removeAttribute(ORIGINAL_TEXT_ATTR);
     }
   });
 }
@@ -160,6 +173,13 @@ export function applyDomOverrides(
       for (const [prop, value] of Object.entries(override.style)) {
         el.style.setProperty(toCssPropertyName(prop), value);
       }
+    }
+
+    if (override.text !== undefined && isTextLeaf(el)) {
+      if (!el.hasAttribute(ORIGINAL_TEXT_ATTR)) {
+        el.setAttribute(ORIGINAL_TEXT_ATTR, el.textContent ?? '');
+      }
+      el.textContent = override.text;
     }
   });
 }

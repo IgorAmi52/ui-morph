@@ -1,0 +1,15 @@
+---
+description: @ui-morph/react library patterns
+globs: packages/react/**/*
+alwaysApply: false
+---
+
+# @ui-morph/react
+
+- Paths and overrides are **DOM-based** (`tree/domDecorator.ts`), not React element tree walking.
+- Use `data-morph-path` on elements; stable IDs via `data-morph-id`. Skip subtrees with `data-morph-passthrough`.
+- Editor chrome must use `data-morph-editor` so MutationObserver and click suppression ignore it.
+- Styles: `.morph-editor-*` namespace in `editor/editorStyles.ts`; avoid heavy UI dependencies.
+- Config changes go through `configReducer` + `ConfigContext`; persist via `StorageAdapter` only.
+- `Morph` resolves `viewId` from prop or `window.location.pathname` when omitted.
+- Build: `tsc -b && vite build` (ESM + CJS). `react` / `react-dom` are peer dependencies.

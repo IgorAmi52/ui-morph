@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ui-morph-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ui_morph
+      POSTGRES_PASSWORD: ui_morph
+      POSTGRES_DB: ui_morph
+    ports:
+      - "5432:5432"
+    volumes:
+      - ui_morph_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ui_morph -d ui_morph"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ui_morph_pgdata:

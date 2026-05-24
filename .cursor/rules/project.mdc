@@ -1,0 +1,12 @@
+---
+description: Core ui-morph monorepo conventions
+alwaysApply: true
+---
+
+# ui-morph project
+
+- pnpm workspace: `packages/react` (library), `packages/api` (Express + Postgres + Gemini agent), `demo/` (app). Read `AGENTS.md` before large changes.
+- `docs/PLAN.md` is outdated in places; trust source + `AGENTS.md` over the plan when they conflict.
+- React library must support React 17+: no `useId`, `useSyncExternalStore`, or React 19-only APIs.
+- Minimize diff scope; no drive-by refactors. No commits unless the user requests them.
+- Agent edits persist via `POST /agent/message`; manual edits save on toolbar Save. `childOrder` uses segment IDs, not full morph paths.

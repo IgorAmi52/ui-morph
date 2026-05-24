@@ -1,0 +1,13 @@
+---
+description: Demo app conventions
+globs: demo/**/*
+alwaysApply: false
+---
+
+# demo
+
+- Insurance SaaS showcase; not shipped as npm package. Uses `@ui-morph/react` via `workspace:*`.
+- `<Morph>` is wired in `demo/src/layouts/InsureLayout.tsx` with `userId="demo-user"` and `editable` (localStorage, no `apiUrl`).
+- Pages under `demo/src/pages/`; shared UI in `demo/src/components/`. CSS in `demo/src/styles/` and colocated `*.css`.
+- To verify morph: `pnpm dev` (library watch) + `pnpm dev:demo` in another terminal, or rely on workspace linking after build.
+- Do not add morph-specific logic to demo unless demonstrating integration; core behavior belongs in `packages/react`.
