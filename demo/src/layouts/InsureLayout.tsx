@@ -1,4 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom';
+import { Morph } from '@ui-morph/react';
 import {
   LayoutDashboard,
   FileText,
@@ -69,7 +70,9 @@ export default function InsureLayout() {
         </div>
       </aside>
       <main className="layout__main">
-        <Outlet />
+        <Morph userId="demo-user" editable>
+          <Outlet />
+        </Morph>
       </main>
     </div>
   );

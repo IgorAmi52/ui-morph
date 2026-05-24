@@ -1,2 +1,7 @@
-test-site/node-modules/
-test-site/dist/
+node_modules/
+dist/
+*.tsbuildinfo
+.tmp/
+*.local
+
+.idea

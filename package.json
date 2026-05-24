@@ -1,0 +1,18 @@
+{
+  "name": "ui-morph",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.1",
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @ui-morph/react dev",
+    "dev:demo": "pnpm --filter demo dev",
+    "build": "pnpm --filter @ui-morph/react build",
+    "build:demo": "pnpm --filter demo build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint"
+  }
+}
