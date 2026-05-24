@@ -228,8 +228,9 @@ describe('runLayoutAgent', () => {
   });
 
   it('applies the fixed legacy dashboard preset without visibility changes or Gemini', async () => {
+    vi.useFakeTimers();
     const { runLayoutAgent } = await import('./layoutAgent.js');
-    const result = await runLayoutAgent({
+    const resultPromise = runLayoutAgent({
       userId: 'u',
       viewId: 'large-loss',
       message: 'Modernize this legacy dashboard: move KPIs and core panels to the top, widen the reserve and workload sections, compact low-priority modules, and keep every section visible.',
@@ -237,6 +238,9 @@ describe('runLayoutAgent', () => {
       config: {},
       snapshot: legacySnapshot,
     });
+    await vi.advanceTimersByTimeAsync(650);
+    const result = await resultPromise;
+    vi.useRealTimers();
 
     expect(result.appliedTools).toEqual(['legacy_console_transform']);
     expect(mockSendMessage).not.toHaveBeenCalled();

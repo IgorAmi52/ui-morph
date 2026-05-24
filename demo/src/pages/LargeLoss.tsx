@@ -133,7 +133,7 @@ export default function LargeLoss() {
   return (
     <div className="legacy-console" data-morph-id="legacy-claims-console">
       <div className="legacy-module-board" data-morph-id="legacy-reorderable-module-board">
-        <header className="legacy-topbar legacy-module legacy-module--full" data-morph-id="legacy-console-topbar" data-morph-disable="resize">
+        <header className="legacy-topbar legacy-module legacy-module--full" data-morph-id="legacy-console-topbar" data-morph-resize="box">
           <div className="legacy-topbar__brand">
             <Shield size={18} />
             <strong>ClaimsOps Enterprise Console</strong>
@@ -163,7 +163,7 @@ export default function LargeLoss() {
           <span>CAT event MW-0524 severity recalculated</span>
         </section>
 
-        <nav className="legacy-tabs legacy-module legacy-module--full" data-morph-id="legacy-tab-overflow" data-morph-disable="resize">
+        <nav className="legacy-tabs legacy-module legacy-module--full" data-morph-id="legacy-tab-overflow" data-morph-resize="box">
           {consoleTabs.map((tab, index) => (
             <button type="button" className={index === 0 ? 'legacy-tabs__tab legacy-tabs__tab--active' : 'legacy-tabs__tab'} key={tab}>
               {tab}
@@ -261,7 +261,7 @@ export default function LargeLoss() {
         <section className="legacy-panel legacy-module legacy-module--xwide" data-morph-id="claim-workload-table" data-morph-resize="box">
           <div className="legacy-panel__title">
             <div>
-              <h2>Large loss workload matrix</h2>
+              <h2 data-morph-enable="resize">Large loss workload matrix</h2>
               <p>Dense operational view intentionally includes every branch requirement and queue signal.</p>
             </div>
             <span className="badge badge--danger">Manual review required</span>
@@ -289,7 +289,7 @@ export default function LargeLoss() {
 
         <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="selected-file-record" data-morph-resize="box">
           <div className="legacy-panel__title">
-            <h2>Selected file record</h2>
+            <h2 data-morph-enable="resize">Selected file record</h2>
             <Lock size={14} />
           </div>
           <div className="legacy-field-table">
@@ -304,7 +304,7 @@ export default function LargeLoss() {
 
         <section className="legacy-panel legacy-module legacy-module--wide" data-morph-id="reserve-layer-stack" data-morph-resize="box">
           <div className="legacy-panel__title">
-            <h2>Reserve layer stack</h2>
+            <h2 data-morph-enable="resize">Reserve layer stack</h2>
             <DollarIcon />
           </div>
           <div className="legacy-mini-table">
@@ -327,7 +327,7 @@ export default function LargeLoss() {
 
         <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="rule-diagnostics" data-morph-resize="box">
           <div className="legacy-panel__title">
-            <h2>Rule diagnostics</h2>
+            <h2 data-morph-enable="resize">Rule diagnostics</h2>
             <FileText size={14} />
           </div>
           <div className="legacy-rule-list">
@@ -344,7 +344,7 @@ export default function LargeLoss() {
 
         <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="coverage-question-stack" data-morph-resize="box">
           <div className="legacy-panel__title">
-            <h2>Coverage issue stack</h2>
+            <h2 data-morph-enable="resize">Coverage issue stack</h2>
             <span className="badge badge--warning">11 open</span>
           </div>
           <ul className="legacy-dense-list">
@@ -360,7 +360,7 @@ export default function LargeLoss() {
 
         <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="batch-job-monitor" data-morph-resize="box">
           <div className="legacy-panel__title">
-            <h2>Batch job monitor</h2>
+            <h2 data-morph-enable="resize">Batch job monitor</h2>
             <Clock size={14} />
           </div>
           <div className="legacy-job-list">
@@ -377,7 +377,7 @@ export default function LargeLoss() {
 
         <section className="legacy-panel legacy-module legacy-module--wide" data-morph-id="vendor-sla-panel" data-morph-resize="box">
           <div className="legacy-panel__title">
-            <h2>Vendor SLA console</h2>
+            <h2 data-morph-enable="resize">Vendor SLA console</h2>
             <span className="badge badge--warning">capacity risk</span>
           </div>
           <div className="legacy-vendor-table">
@@ -394,7 +394,7 @@ export default function LargeLoss() {
 
         <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="compliance-checklist" data-morph-resize="box">
           <div className="legacy-panel__title">
-            <h2>Compliance checklist</h2>
+            <h2 data-morph-enable="resize">Compliance checklist</h2>
             <span className="badge badge--info">6 controls</span>
           </div>
           <ul className="legacy-check-list">
@@ -409,7 +409,7 @@ export default function LargeLoss() {
 
         <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="audit-timeline" data-morph-resize="box">
           <div className="legacy-panel__title">
-            <h2>Audit and diary stream</h2>
+            <h2 data-morph-enable="resize">Audit and diary stream</h2>
             <span className="badge badge--neutral">live</span>
           </div>
           <div className="legacy-timeline">
@@ -428,7 +428,7 @@ export default function LargeLoss() {
 
         <section className="legacy-panel legacy-module legacy-module--wide" data-morph-id="raw-system-payload" data-morph-resize="box">
           <div className="legacy-panel__title">
-            <h2>Raw policy/claim payload preview</h2>
+            <h2 data-morph-enable="resize">Raw policy/claim payload preview</h2>
             <span className="badge badge--neutral">legacy JSON</span>
           </div>
           <pre>{`{
@@ -461,7 +461,7 @@ function PanelTitle({ title, badge, icon }: { title: string; badge: string; icon
   return (
     <div className="legacy-panel__title">
       <div>
-        <h2>{title}</h2>
+        <h2 data-morph-enable="resize">{title}</h2>
       </div>
       <span className="legacy-panel__title-side">
         {icon}

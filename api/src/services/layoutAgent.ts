@@ -38,6 +38,11 @@ function getClient(): GoogleGenerativeAI {
   return new GoogleGenerativeAI(apiKey);
 }
 
+function delay(ms: number): Promise<void> {
+  if (ms <= 0) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function runTool(
   name: string,
   args: Record<string, unknown>,
@@ -406,7 +411,10 @@ export async function runLayoutAgent(
   }
 
   const legacyProposal = legacyConsoleTransform(scopedRequest);
-  if (legacyProposal) return legacyProposal;
+  if (legacyProposal) {
+    await delay(650);
+    return legacyProposal;
+  }
 
   const genAI = getClient();
   const model = genAI.getGenerativeModel({
