@@ -33,49 +33,49 @@ const bottomNav = [
 
 export default function InsureLayout() {
   return (
-    <Morph userId="demo-user" apiUrl="http://localhost:3001" editable>
-      <div className="layout">
-        <aside className="layout__sidebar">
-          <div className="layout__brand">
-            <div className="layout__logo">
-              <Shield size={20} />
-            </div>
-            <span>insure.me</span>
+    <div className="layout">
+      <aside className="layout__sidebar">
+        <div className="layout__brand">
+          <div className="layout__logo">
+            <Shield size={20} />
           </div>
-          <nav className="layout__nav">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  `layout__nav-item${isActive ? ' layout__nav-item--active' : ''}`
-                }
-              >
-                <item.icon size={18} />
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-          <div className="layout__nav-bottom">
-            {bottomNav.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `layout__nav-item${isActive ? ' layout__nav-item--active' : ''}`
-                }
-              >
-                <item.icon size={18} />
-                {item.label}
-              </NavLink>
-            ))}
-          </div>
-        </aside>
-        <main className="layout__main" data-morph-passthrough>
+          <span>insure.me</span>
+        </div>
+        <nav className="layout__nav">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                `layout__nav-item${isActive ? ' layout__nav-item--active' : ''}`
+              }
+            >
+              <item.icon size={18} />
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="layout__nav-bottom">
+          {bottomNav.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `layout__nav-item${isActive ? ' layout__nav-item--active' : ''}`
+              }
+            >
+              <item.icon size={18} />
+              {item.label}
+            </NavLink>
+          ))}
+        </div>
+      </aside>
+      <main className="layout__main">
+        <Morph userId="demo-user" apiUrl="http://localhost:3001" editable>
           <Outlet />
-        </main>
-      </div>
-    </Morph>
+        </Morph>
+      </main>
+    </div>
   );
 }
