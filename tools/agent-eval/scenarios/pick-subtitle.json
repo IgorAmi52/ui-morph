@@ -1,0 +1,55 @@
+{
+  "id": "pick-subtitle",
+  "split": "train",
+  "description": "Hide the correct line when multiple paragraphs exist",
+  "message": "Hide the subtitle under the dashboard title, not the footer note",
+  "config": {},
+  "snapshot": {
+    "viewId": "dashboard",
+    "nodeCount": 4,
+    "nodes": [
+      {
+        "path": "morph.div:0",
+        "tag": "div",
+        "segment": "div:0",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.div:0.h1:0",
+            "tag": "h1",
+            "segment": "h1:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Dashboard",
+            "children": []
+          },
+          {
+            "path": "morph.div:0.p:0",
+            "tag": "p",
+            "segment": "p:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Monthly overview",
+            "children": []
+          },
+          {
+            "path": "morph.div:0.p:1",
+            "tag": "p",
+            "segment": "p:1",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Footer note",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "toolsSucceeded": true,
+    "configHas": {
+      "morph.div:0.p:0": { "hidden": true }
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "id": "style-title",
+  "split": "train",
+  "description": "Change heading color",
+  "message": "Make the dashboard title red",
+  "config": {},
+  "snapshot": {
+    "viewId": "dashboard",
+    "nodeCount": 3,
+    "nodes": [
+      {
+        "path": "morph.div:0",
+        "tag": "div",
+        "segment": "div:0",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.div:0.h1:0",
+            "tag": "h1",
+            "segment": "h1:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Dashboard",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "toolsSucceeded": true,
+    "appliedToolsIncludes": ["set_element_override"],
+    "configPathKeys": ["morph.div:0.h1:0"],
+    "replyMustNotMatch": ["parentPath", "set_element_override", "JSON"]
+  }
+}

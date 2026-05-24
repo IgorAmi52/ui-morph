@@ -1,0 +1,54 @@
+{
+  "id": "preserve-child-order",
+  "split": "val",
+  "description": "Style one element without losing existing childOrder on parent",
+  "message": "Make the dashboard title blue",
+  "config": {
+    "morph.div:0": {
+      "childOrder": ["p:0", "h1:0"]
+    }
+  },
+  "snapshot": {
+    "viewId": "dashboard",
+    "nodeCount": 3,
+    "nodes": [
+      {
+        "path": "morph.div:0",
+        "tag": "div",
+        "segment": "div:0",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.div:0.h1:0",
+            "tag": "h1",
+            "segment": "h1:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Dashboard",
+            "children": []
+          },
+          {
+            "path": "morph.div:0.p:0",
+            "tag": "p",
+            "segment": "p:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Overview",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "toolsSucceeded": true,
+    "appliedToolsIncludes": ["set_element_override"],
+    "configPathKeys": ["morph.div:0.h1:0"],
+    "configHas": {
+      "morph.div:0": {
+        "childOrder": ["p:0", "h1:0"]
+      }
+    }
+  }
+}

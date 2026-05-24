@@ -1,0 +1,108 @@
+name: Agent eval
+
+on:
+  pull_request:
+    paths:
+      - 'packages/api/**'
+      - 'tools/agent-eval/**'
+      - 'tools/gepa-opt/**'
+      - '.github/workflows/agent-eval.yml'
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      run_gepa:
+        description: 'Run GEPA optimization (costly)'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ui_morph
+          POSTGRES_PASSWORD: ui_morph
+          POSTGRES_DB: ui_morph
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ui_morph -d ui_morph"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://ui_morph:ui_morph@localhost:5432/ui_morph
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - run: pnpm install
+      - run: pnpm --filter @ui-morph/api test
+
+  nightly-eval:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    needs: unit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - uses: astral-sh/setup-uv@v5
+      - run: pnpm install
+      - name: Val set eval
+        if: ${{ secrets.GEMINI_API_KEY != '' }}
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: pnpm --filter @ui-morph/api exec tsx ../../tools/agent-eval/run_eval.ts --split val --json > val_result.json
+      - name: Check regression vs baseline
+        if: ${{ secrets.GEMINI_API_KEY != '' }}
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          node -e "
+          const fs = require('fs');
+          const baseline = JSON.parse(fs.readFileSync('tools/agent-eval/baseline_score.json','utf8'));
+          const result = JSON.parse(fs.readFileSync('val_result.json','utf8'));
+          const tolerance = baseline.tolerance ?? 0.05;
+          const min = baseline.meanScore - tolerance;
+          console.log('Val mean:', result.meanScore, 'baseline:', baseline.meanScore);
+          if (result.meanScore < min) {
+            console.error('Regression: val score below baseline - tolerance');
+            process.exit(1);
+          }
+          "
+      - name: Upload val eval artifact
+        if: always() && hashFiles('val_result.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-eval-val
+          path: val_result.json
+      - name: GEPA optimize
+        if: >-
+          secrets.GEMINI_API_KEY != '' &&
+          github.event_name == 'workflow_dispatch' &&
+          inputs.run_gepa == true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEPA_MAX_METRIC_CALLS: ${{ vars.GEPA_MAX_METRIC_CALLS || '10' }}
+          GEPA_REFLECTION_LM: ${{ vars.GEPA_REFLECTION_LM || 'gemini/gemini-2.5-flash' }}
+        run: |
+          cd tools/gepa-opt && uv sync
+          cd ../.. && pnpm gepa:optimize
+      - name: Upload GEPA artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gepa-artifacts
+          path: tools/gepa-opt/artifacts/
+          if-no-files-found: ignore

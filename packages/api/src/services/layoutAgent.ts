@@ -74,7 +74,9 @@ export async function runLayoutAgent(
   const model = genAI.getGenerativeModel({
     model: getModelName(),
     tools: [LAYOUT_AGENT_TOOLS],
-    systemInstruction: buildSystemPrompt(request),
+    systemInstruction: buildSystemPrompt(request, {
+      instructionsOverride: request.instructionsOverride,
+    }),
   });
 
   const history: Content[] = (request.history ?? []).map((m) => ({
@@ -86,6 +88,7 @@ export async function runLayoutAgent(
 
   let workingConfig: MorphConfig = { ...request.config };
   const appliedTools: string[] = [];
+  const toolErrors: string[] = [];
   let response = await chat.sendMessage(formatUserMessage(request));
   let rounds = 0;
 
@@ -116,6 +119,7 @@ export async function runLayoutAgent(
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        toolErrors.push(`${name}: ${message}`);
         functionResponses.push({
           functionResponse: {
             name,
@@ -147,5 +151,6 @@ export async function runLayoutAgent(
     proposedConfig,
     changes,
     appliedTools: appliedTools.length > 0 ? appliedTools : undefined,
+    toolErrors: toolErrors.length > 0 ? toolErrors : undefined,
   };
 }

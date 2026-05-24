@@ -67,6 +67,8 @@ export interface AgentMessageRequest {
   snapshot: LayoutSnapshot;
   config: MorphConfig;
   history?: AgentChatMessage[];
+  /** Dev/eval only: replace static layout instructions (GEPA). */
+  instructionsOverride?: string;
 }
 
 export interface AgentMessageResponse {
@@ -75,6 +77,8 @@ export interface AgentMessageResponse {
   proposedConfig?: MorphConfig;
   changes?: ConfigChangeSummary[];
   appliedTools?: string[];
+  /** Populated when a tool call returned success: false (eval / debugging). */
+  toolErrors?: string[];
 }
 
 export interface StoredChatMessage {

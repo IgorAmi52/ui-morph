@@ -1,0 +1,37 @@
+{
+  "id": "which-is-hidden",
+  "split": "val",
+  "description": "Answer about current overrides without editing",
+  "message": "Is the welcome banner hidden right now?",
+  "config": {
+    "morph.div:0": { "hidden": true }
+  },
+  "snapshot": {
+    "viewId": "dashboard",
+    "nodeCount": 2,
+    "nodes": [
+      {
+        "path": "morph.div:0",
+        "tag": "div",
+        "segment": "div:0",
+        "textLeaf": false,
+        "hidden": true,
+        "children": [
+          {
+            "path": "morph.div:0.h1:0",
+            "tag": "h1",
+            "segment": "h1:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Welcome banner",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "noProposedConfig": true,
+    "replyMustMatchAny": ["yes", "hidden", "isn't visible", "not visible", "it is"]
+  }
+}

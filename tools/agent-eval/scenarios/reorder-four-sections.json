@@ -1,0 +1,94 @@
+{
+  "id": "reorder-four-sections",
+  "split": "train",
+  "description": "Place charts directly under KPI (KPI remains second from top)",
+  "message": "Move the charts block to sit directly below the KPI summary. Keep KPI as the second section from the top.",
+  "config": {},
+  "snapshot": {
+    "viewId": "dashboard",
+    "rootPath": "morph",
+    "nodeCount": 8,
+    "nodes": [
+      {
+        "path": "morph.section:0",
+        "tag": "section",
+        "segment": "section:0",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.section:0.h2:0",
+            "tag": "h2",
+            "segment": "h2:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Recent claims",
+            "children": []
+          }
+        ]
+      },
+      {
+        "path": "morph.section:1",
+        "tag": "section",
+        "segment": "section:1",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.section:1.h2:0",
+            "tag": "h2",
+            "segment": "h2:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "KPI summary",
+            "children": []
+          }
+        ]
+      },
+      {
+        "path": "morph.section:2",
+        "tag": "section",
+        "segment": "section:2",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.section:2.h2:0",
+            "tag": "h2",
+            "segment": "h2:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Alerts",
+            "children": []
+          }
+        ]
+      },
+      {
+        "path": "morph.section:3",
+        "tag": "section",
+        "segment": "section:3",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.section:3.h2:0",
+            "tag": "h2",
+            "segment": "h2:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Charts",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "toolsSucceeded": true,
+    "appliedToolsIncludes": ["reorder_children"],
+    "childOrderAt": {
+      "path": "morph",
+      "order": ["section:0", "section:1", "section:3", "section:2"]
+    }
+  }
+}

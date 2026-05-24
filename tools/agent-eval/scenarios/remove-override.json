@@ -1,0 +1,39 @@
+{
+  "id": "remove-override",
+  "split": "val",
+  "description": "Clear an existing override",
+  "message": "Undo the red color on the title and restore default styling",
+  "config": {
+    "morph.div:0.h1:0": {
+      "style": { "color": "red" }
+    }
+  },
+  "snapshot": {
+    "viewId": "dashboard",
+    "nodeCount": 2,
+    "nodes": [
+      {
+        "path": "morph.div:0",
+        "tag": "div",
+        "segment": "div:0",
+        "textLeaf": false,
+        "hidden": false,
+        "children": [
+          {
+            "path": "morph.div:0.h1:0",
+            "tag": "h1",
+            "segment": "h1:0",
+            "textLeaf": true,
+            "hidden": false,
+            "text": "Dashboard",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "toolsSucceeded": true,
+    "appliedToolsIncludes": ["remove_element_override"]
+  }
+}
