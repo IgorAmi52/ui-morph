@@ -17,8 +17,10 @@ export interface MorphProps {
   sessionId?: string;
   routeId?: string;
   apiUrl?: string;
+  storageAdapter?: StorageAdapter;
   mode?: MorphMode;
   editable?: boolean;
+  onShare?: (payload: MorphSharePayload) => void | Promise<void>;
   onSave?: (config: MorphConfig) => void;
   onError?: (error: Error) => void;
   fallback?: ReactNode;
@@ -76,6 +78,29 @@ export interface StorageAdapter {
     routeId?: string,
   ): Promise<MorphConfig>;
 }
+
+export interface MorphSharePayload {
+  userId: string;
+  viewId: string;
+  sessionId: string;
+  routeId: string;
+  config: MorphConfig;
+  sourcePath?: string;
+}
+
+export interface ShareMetadata {
+  shareId: string;
+  userId: string;
+  viewId: string;
+  sessionId: string;
+  routeId: string;
+  sourcePath?: string;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateSharePayload = MorphSharePayload;
 
 /** Compact tree sent to the layout agent (shared contract with @ui-morph/api). */
 export interface LayoutNode {
