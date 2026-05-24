@@ -2,6 +2,8 @@ import type { ConfigChangeSummary } from '../types.js';
 import { getPool } from '../db/client.js';
 import { ValidationError } from './validationService.js';
 
+const DEFAULT_SESSION_ID = 'default';
+
 export interface StoredChatProposal {
   status: 'accepted' | 'discarded' | 'expired';
   changes: ConfigChangeSummary[];
@@ -61,11 +63,14 @@ export function validateStoredMessages(raw: unknown): StoredChatMessage[] {
 export async function getChatHistory(
   userId: string,
   viewId: string,
+  sessionId = DEFAULT_SESSION_ID,
+  routeId = viewId,
 ): Promise<StoredChatMessage[]> {
   const db = getPool();
   const result = await db.query<{ messages: unknown }>(
-    `SELECT messages FROM morph_chat_history WHERE user_id = $1 AND view_id = $2`,
-    [userId, viewId],
+    `SELECT messages FROM morph_chat_history
+     WHERE user_id = $1 AND view_id = $2 AND session_id = $3 AND route_id = $4`,
+    [userId, viewId, sessionId, routeId],
   );
   if (result.rowCount === 0) return [];
   return parseMessages(result.rows[0].messages);
@@ -75,15 +80,17 @@ export async function saveChatHistory(
   userId: string,
   viewId: string,
   messages: StoredChatMessage[],
+  sessionId = DEFAULT_SESSION_ID,
+  routeId = viewId,
 ): Promise<StoredChatMessage[]> {
   const validated = validateStoredMessages(messages);
   const db = getPool();
   await db.query(
-    `INSERT INTO morph_chat_history (user_id, view_id, messages)
-     VALUES ($1, $2, $3::jsonb)
-     ON CONFLICT (user_id, view_id)
+    `INSERT INTO morph_chat_history (user_id, view_id, session_id, route_id, messages)
+     VALUES ($1, $2, $3, $4, $5::jsonb)
+     ON CONFLICT (user_id, view_id, session_id, route_id)
      DO UPDATE SET messages = EXCLUDED.messages, updated_at = NOW()`,
-    [userId, viewId, JSON.stringify(validated)],
+    [userId, viewId, sessionId, routeId, JSON.stringify(validated)],
   );
   return validated;
 }

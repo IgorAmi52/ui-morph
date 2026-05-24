@@ -10,6 +10,8 @@ export type MorphConfig = Record<string, ElementOverride>;
 export interface OverrideRequest {
   userId: string;
   viewId: string;
+  sessionId?: string;
+  routeId?: string;
   path: string;
   type: 'manual' | 'ai_prompt';
   changes?: ElementOverride;

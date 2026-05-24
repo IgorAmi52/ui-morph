@@ -16,6 +16,8 @@ overrideRouter.post(
         payload.viewId,
         payload.path,
         payload.changes!,
+        payload.sessionId,
+        payload.routeId,
       );
       res.json(config);
       return;
@@ -26,6 +28,8 @@ overrideRouter.post(
       payload.viewId,
       payload.path,
       payload.prompt!,
+      payload.sessionId,
+      payload.routeId,
     );
     res.json(config);
   }),

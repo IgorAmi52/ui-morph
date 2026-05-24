@@ -1,5 +1,5 @@
 import pg from 'pg';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,6 +34,13 @@ export function resetPool(): void {
 export async function runMigrations(): Promise<void> {
   const db = getPool();
   const dir = dirname(fileURLToPath(import.meta.url));
-  const sql = readFileSync(join(dir, 'migrations', '001_initial.sql'), 'utf8');
-  await db.query(sql);
+  const migrationsDir = join(dir, 'migrations');
+  const migrationFiles = readdirSync(migrationsDir)
+    .filter((file) => file.endsWith('.sql'))
+    .sort();
+
+  for (const file of migrationFiles) {
+    const sql = readFileSync(join(migrationsDir, file), 'utf8');
+    await db.query(sql);
+  }
 }

@@ -161,6 +161,8 @@ export function validateConfig(config: Record<string, unknown>): Record<string, 
 export function validateOverrideRequest(body: unknown): {
   userId: string;
   viewId: string;
+  sessionId?: string;
+  routeId?: string;
   path: string;
   type: 'manual' | 'ai_prompt';
   changes?: ElementOverride;
@@ -170,7 +172,7 @@ export function validateOverrideRequest(body: unknown): {
     throw new ValidationError('Request body must be an object');
   }
 
-  const { userId, viewId, path, type, changes, prompt } = body as Record<string, unknown>;
+  const { userId, viewId, sessionId, routeId, path, type, changes, prompt } = body as Record<string, unknown>;
 
   if (typeof userId !== 'string' || !userId.trim()) {
     throw new ValidationError('userId is required');
@@ -193,9 +195,11 @@ export function validateOverrideRequest(body: unknown): {
       throw new ValidationError('changes must be an object');
     }
     return {
-      userId,
-      viewId,
-      path,
+      userId: userId.trim(),
+      viewId: viewId.trim(),
+      sessionId: typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : undefined,
+      routeId: typeof routeId === 'string' && routeId.trim() ? routeId.trim() : undefined,
+      path: path.trim(),
       type,
       changes: validateOverride(changes as ElementOverride),
     };
@@ -205,7 +209,15 @@ export function validateOverrideRequest(body: unknown): {
     throw new ValidationError('prompt is required for ai_prompt overrides');
   }
 
-  return { userId, viewId, path, type, prompt: prompt.trim() };
+  return {
+    userId: userId.trim(),
+    viewId: viewId.trim(),
+    sessionId: typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : undefined,
+    routeId: typeof routeId === 'string' && routeId.trim() ? routeId.trim() : undefined,
+    path: path.trim(),
+    type,
+    prompt: prompt.trim(),
+  };
 }
 
 function validateLayoutNode(node: unknown, label: string): LayoutNode {

@@ -116,6 +116,54 @@ describe('HTTP API', () => {
       expect(userA.body).toEqual({ 'morph.div:0': { hidden: true } });
       expect(userB.body).toEqual({ 'morph.div:0': { text: 'User B' } });
     });
+
+    it('isolates configs per client session', async () => {
+      await request(app)
+        .put('/config/user-a/dashboard?sessionId=client-a')
+        .send({ overrides: { 'morph.div:0': { hidden: true } } })
+        .expect(200);
+
+      await request(app)
+        .put('/config/user-a/dashboard?sessionId=client-b')
+        .send({ overrides: { 'morph.div:0': { text: 'Client B' } } })
+        .expect(200);
+
+      const clientA = await request(app)
+        .get('/config/user-a/dashboard?sessionId=client-a')
+        .expect(200);
+      const clientB = await request(app)
+        .get('/config/user-a/dashboard?sessionId=client-b')
+        .expect(200);
+      const defaultSession = await request(app)
+        .get('/config/user-a/dashboard')
+        .expect(200);
+
+      expect(clientA.body).toEqual({ 'morph.div:0': { hidden: true } });
+      expect(clientB.body).toEqual({ 'morph.div:0': { text: 'Client B' } });
+      expect(defaultSession.body).toEqual({});
+    });
+
+    it('isolates configs per route within one client session', async () => {
+      await request(app)
+        .put('/config/user-a/shared-card?sessionId=client-a&routeId=claims')
+        .send({ overrides: { 'morph.div:0': { hidden: true } } })
+        .expect(200);
+
+      await request(app)
+        .put('/config/user-a/shared-card?sessionId=client-a&routeId=policies')
+        .send({ overrides: { 'morph.div:0': { text: 'Policies copy' } } })
+        .expect(200);
+
+      const claims = await request(app)
+        .get('/config/user-a/shared-card?sessionId=client-a&routeId=claims')
+        .expect(200);
+      const policies = await request(app)
+        .get('/config/user-a/shared-card?sessionId=client-a&routeId=policies')
+        .expect(200);
+
+      expect(claims.body).toEqual({ 'morph.div:0': { hidden: true } });
+      expect(policies.body).toEqual({ 'morph.div:0': { text: 'Policies copy' } });
+    });
   });
 
   describe('POST /override', () => {

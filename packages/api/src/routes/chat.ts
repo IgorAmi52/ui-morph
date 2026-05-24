@@ -6,6 +6,7 @@ import {
   validateStoredMessages,
 } from '../services/chatHistoryService.js';
 import { ValidationError } from '../services/validationService.js';
+import { resolveRouteId, resolveSessionId } from './sessionScope.js';
 
 function param(value: string | string[]): string {
   return Array.isArray(value) ? value[0] : value;
@@ -18,7 +19,12 @@ chatRouter.get(
   asyncHandler(async (req, res) => {
     const userId = param(req.params.userId);
     const viewId = param(req.params.viewId);
-    const messages = await getChatHistory(userId, viewId);
+    const messages = await getChatHistory(
+      userId,
+      viewId,
+      resolveSessionId(req),
+      resolveRouteId(req, viewId),
+    );
     res.json({ messages });
   }),
 );
@@ -28,6 +34,8 @@ chatRouter.put(
   asyncHandler(async (req, res) => {
     const userId = param(req.params.userId);
     const viewId = param(req.params.viewId);
+    const sessionId = resolveSessionId(req);
+    const routeId = resolveRouteId(req, viewId);
     const body = req.body as { messages?: unknown };
 
     if (body === null || typeof body !== 'object' || body.messages === undefined) {
@@ -38,6 +46,8 @@ chatRouter.put(
       userId,
       viewId,
       validateStoredMessages(body.messages),
+      sessionId,
+      routeId,
     );
     res.json({ messages });
   }),

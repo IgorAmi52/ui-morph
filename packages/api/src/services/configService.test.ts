@@ -56,6 +56,39 @@ describe('configService', () => {
     });
   });
 
+  it('scopes config by sessionId', async () => {
+    await saveConfig('user-a', 'dashboard', {
+      'morph.div:0': { hidden: true },
+    }, 'client-a');
+    await saveConfig('user-a', 'dashboard', {
+      'morph.div:0': { text: 'Client B' },
+    }, 'client-b');
+
+    await expect(getConfig('user-a', 'dashboard', 'client-a')).resolves.toEqual({
+      'morph.div:0': { hidden: true },
+    });
+    await expect(getConfig('user-a', 'dashboard', 'client-b')).resolves.toEqual({
+      'morph.div:0': { text: 'Client B' },
+    });
+    await expect(getConfig('user-a', 'dashboard')).resolves.toEqual({});
+  });
+
+  it('scopes config by routeId within the same session', async () => {
+    await saveConfig('user-a', 'shared-card', {
+      'morph.div:0': { hidden: true },
+    }, 'client-a', 'claims');
+    await saveConfig('user-a', 'shared-card', {
+      'morph.div:0': { text: 'Policies copy' },
+    }, 'client-a', 'policies');
+
+    await expect(getConfig('user-a', 'shared-card', 'client-a', 'claims')).resolves.toEqual({
+      'morph.div:0': { hidden: true },
+    });
+    await expect(getConfig('user-a', 'shared-card', 'client-a', 'policies')).resolves.toEqual({
+      'morph.div:0': { text: 'Policies copy' },
+    });
+  });
+
   it('rejects invalid overrides on save', async () => {
     await expect(
       saveConfig('user-a', 'dashboard', {

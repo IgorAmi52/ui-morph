@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { getConfig, saveConfig } from '../services/configService.js';
 import { validateConfig } from '../services/validationService.js';
 import { asyncHandler, HttpError } from '../middleware/errorHandler.js';
+import { resolveRouteId, resolveSessionId } from './sessionScope.js';
 
 function param(value: string | string[]): string {
   return Array.isArray(value) ? value[0] : value;
@@ -14,7 +15,7 @@ configRouter.get(
   asyncHandler(async (req, res) => {
     const userId = param(req.params.userId);
     const viewId = param(req.params.viewId);
-    const config = await getConfig(userId, viewId);
+    const config = await getConfig(userId, viewId, resolveSessionId(req), resolveRouteId(req, viewId));
     res.json(config);
   }),
 );
@@ -24,6 +25,8 @@ configRouter.put(
   asyncHandler(async (req, res) => {
     const userId = param(req.params.userId);
     const viewId = param(req.params.viewId);
+    const sessionId = resolveSessionId(req);
+    const routeId = resolveRouteId(req, viewId);
     const body = req.body as { overrides?: unknown };
 
     if (body === null || typeof body !== 'object' || body.overrides === undefined) {
@@ -31,7 +34,7 @@ configRouter.put(
     }
 
     const overrides = validateConfig(body.overrides as Record<string, unknown>);
-    const saved = await saveConfig(userId, viewId, overrides);
+    const saved = await saveConfig(userId, viewId, overrides, sessionId, routeId);
     res.json(saved);
   }),
 );
