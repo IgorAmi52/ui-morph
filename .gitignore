@@ -3,5 +3,6 @@ dist/
 *.tsbuildinfo
 .tmp/
 *.local
+.env
 
 .idea

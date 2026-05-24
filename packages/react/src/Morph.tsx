@@ -78,6 +78,7 @@ export function Morph({
       adapter={adapterRef.current}
       userId={userId}
       viewId={viewId}
+      apiUrl={apiUrl}
       onSave={onSave}
       onError={onError}
     >

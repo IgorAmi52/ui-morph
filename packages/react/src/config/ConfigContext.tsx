@@ -13,6 +13,7 @@ interface ConfigProviderProps {
   adapter: StorageAdapter;
   userId: string;
   viewId: string;
+  apiUrl?: string;
   onSave?: (config: MorphConfig) => void;
   onError?: (error: Error) => void;
   children: ReactNode;
@@ -26,6 +27,7 @@ export function ConfigProvider({
   adapter,
   userId,
   viewId,
+  apiUrl,
   onSave,
   onError,
   children,
@@ -73,6 +75,10 @@ export function ConfigProvider({
     selectedPath,
     selectElement,
     saveConfig,
+    userId,
+    viewId,
+    apiUrl,
+    onError,
   };
 
   return <MorphContext.Provider value={value}>{children}</MorphContext.Provider>;

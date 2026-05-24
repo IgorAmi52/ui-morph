@@ -6,4 +6,11 @@ export type {
   MorphProps,
   MorphMode,
   StorageAdapter,
+  LayoutNode,
+  LayoutSnapshot,
+  AgentChatMessage,
+  AgentMessageRequest,
+  AgentMessageResponse,
+  ConfigChangeSummary,
 } from './types';
+export { serializeLayoutSnapshot } from './agent/serializeLayoutSnapshot';

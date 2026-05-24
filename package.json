@@ -9,10 +9,16 @@
   },
   "scripts": {
     "dev": "pnpm --filter @ui-morph/react dev",
+    "dev:api": "pnpm --filter @ui-morph/api dev",
     "dev:demo": "pnpm --filter demo dev",
     "build": "pnpm --filter @ui-morph/react build",
+    "build:api": "pnpm --filter @ui-morph/api build",
     "build:demo": "pnpm --filter demo build",
     "typecheck": "pnpm -r typecheck",
-    "lint": "pnpm -r lint"
+    "lint": "pnpm -r lint",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter @ui-morph/api migrate",
+    "test": "pnpm --filter @ui-morph/api test && pnpm --filter @ui-morph/react test"
   }
 }

@@ -38,9 +38,114 @@ export interface MorphContextValue {
   selectedPath: string | null;
   selectElement: (path: string | null) => void;
   saveConfig: () => Promise<boolean>;
+  userId: string;
+  viewId: string;
+  apiUrl?: string;
+  onError?: (error: Error) => void;
 }
 
 export interface StorageAdapter {
   getConfig(userId: string, viewId: string): Promise<MorphConfig>;
   saveConfig(userId: string, viewId: string, config: MorphConfig): Promise<MorphConfig>;
+}
+
+/** Compact tree sent to the layout agent (shared contract with @ui-morph/api). */
+export interface LayoutNode {
+  path: string;
+  tag: string;
+  segment: string;
+  role?: string;
+  name?: string;
+  text?: string;
+  textLeaf: boolean;
+  hidden: boolean;
+  override?: ElementOverride;
+  computed?: {
+    color?: string;
+    fontSize?: string;
+    backgroundColor?: string;
+  };
+  children: LayoutNode[];
+}
+
+export interface LayoutSnapshot {
+  viewId: string;
+  /** Virtual root path for top-level reorder (default "morph"). */
+  rootPath?: string;
+  selectedPath?: string;
+  truncated?: boolean;
+  nodeCount: number;
+  nodes: LayoutNode[];
+}
+
+export interface ConfigChangeSummary {
+  path: string;
+  label: string;
+}
+
+export interface AgentChatMessage {
+  id?: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt?: string;
+  proposal?: {
+    id: string;
+    status: 'pending' | 'accepted' | 'discarded';
+    beforeConfig: MorphConfig;
+    proposedConfig: MorphConfig;
+    changes: ConfigChangeSummary[];
+  };
+  /** Loaded from storage — no live config blobs */
+  proposalSummary?: {
+    status: 'accepted' | 'discarded' | 'expired';
+    changes: ConfigChangeSummary[];
+  };
+}
+
+export interface AgentMessageRequest {
+  userId: string;
+  viewId: string;
+  message: string;
+  selectedPath?: string;
+  selectionLabel?: string;
+  selectionSubtree?: LayoutNode;
+  snapshot: LayoutSnapshot;
+  config: MorphConfig;
+  history?: AgentChatMessage[];
+}
+
+export interface AgentMessageResponse {
+  reply: string;
+  /** @deprecated use proposedConfig — kept for older clients */
+  config?: MorphConfig;
+  proposedConfig?: MorphConfig;
+  changes?: ConfigChangeSummary[];
+  appliedTools?: string[];
+}
+
+export interface StoredChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+  proposal?: {
+    status: 'accepted' | 'discarded' | 'expired';
+    changes: ConfigChangeSummary[];
+  };
+}
+
+export interface ChatHistoryResponse {
+  messages: StoredChatMessage[];
+}
+
+export interface AgentSuggestionsRequest {
+  userId: string;
+  viewId: string;
+  selectedPath?: string;
+  snapshot: LayoutSnapshot;
+  config: MorphConfig;
+}
+
+export interface AgentSuggestionsResponse {
+  suggestions: string[];
 }

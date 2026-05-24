@@ -31,7 +31,7 @@ const bottomNav = [
 
 export default function InsureLayout() {
   return (
-    <Morph userId="demo-user" editable>
+    <Morph userId="demo-user" apiUrl="http://localhost:3001" editable>
       <div className="layout">
         <aside className="layout__sidebar">
           <div className="layout__brand">

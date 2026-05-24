@@ -1,17 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useMorphContext } from '../config/ConfigContext';
+import { SparklesIcon } from './SparklesIcon';
 import type { ElementOverride } from '../types';
 import { VisibilityToggle } from './controls/VisibilityToggle';
 import { ColorPicker } from './controls/ColorPicker';
 import { SizeControl } from './controls/SizeControl';
-import { AiPromptInput } from './controls/AiPromptInput';
+import { AgentChat } from './controls/AgentChat';
+import { useResizablePanel } from './useResizablePanel';
 import {
   getDisabledCapabilities,
   isCapabilityEnabled,
   type MorphCapability,
 } from './capabilities';
 
-type Tab = 'manual' | 'ai';
+type Tab = 'chat' | 'manual';
 type PanelSide = 'left' | 'right';
 
 interface Defaults {
@@ -77,8 +79,7 @@ function resolveEffectiveBackgroundHex(el: HTMLElement): string {
   return '#ffffff';
 }
 
-function resolvePanelSide(el: HTMLElement): PanelSide {
-  const panelWidth = 340;
+function resolvePanelSide(el: HTMLElement, panelWidth: number): PanelSide {
   const rect = el.getBoundingClientRect();
   const rightPanelLeft = window.innerWidth - panelWidth;
   const rightPanelWouldCoverSelection = rect.right > rightPanelLeft;
@@ -86,7 +87,7 @@ function resolvePanelSide(el: HTMLElement): PanelSide {
   return rightPanelWouldCoverSelection && hasRoomOnLeft ? 'left' : 'right';
 }
 
-function readSelectedElementState(path: string): SelectedElementState {
+function readSelectedElementState(path: string, panelWidth: number): SelectedElementState {
   const el = document.querySelector<HTMLElement>(`[data-morph-path="${CSS.escape(path)}"]`);
   if (!el) return EMPTY_STATE;
   const computed = getComputedStyle(el);
@@ -97,14 +98,34 @@ function readSelectedElementState(path: string): SelectedElementState {
       fontSize: computed.fontSize,
     },
     disabledCapabilities: getDisabledCapabilities(el),
-    panelSide: resolvePanelSide(el),
+    panelSide: resolvePanelSide(el, panelWidth),
   };
 }
 
-export function PropertyPanel() {
-  const { selectedPath, config, dispatch, selectElement } = useMorphContext();
-  const [activeTab, setActiveTab] = useState<Tab>('manual');
+function selectionLabel(path: string): string {
+  const el = document.querySelector<HTMLElement>(`[data-morph-path="${CSS.escape(path)}"]`);
+  const text = el?.textContent?.replace(/\s+/g, ' ').trim();
+  if (text && text.length > 0) {
+    return text.length > 36 ? `${text.slice(0, 35)}…` : text;
+  }
+  return 'Selected element';
+}
+
+interface PropertyPanelProps {
+  onClose: () => void;
+  suggestions: string[];
+  suggestionsRefreshing: boolean;
+}
+
+export function PropertyPanel({
+  onClose,
+  suggestions,
+  suggestionsRefreshing,
+}: PropertyPanelProps) {
+  const { selectedPath, config, dispatch } = useMorphContext();
+  const [activeTab, setActiveTab] = useState<Tab>('chat');
   const [elementState, setElementState] = useState<SelectedElementState>(EMPTY_STATE);
+  const { width, onResizePointerDown } = useResizablePanel();
 
   const override = selectedPath ? config[selectedPath] ?? {} : {};
   const { defaults, disabledCapabilities, panelSide } = elementState;
@@ -112,17 +133,20 @@ export function PropertyPanel() {
   const canChangeTextColor = isCapabilityEnabled(disabledCapabilities, 'textColor');
   const canChangeBackground = isCapabilityEnabled(disabledCapabilities, 'background');
   const canResize = isCapabilityEnabled(disabledCapabilities, 'resize');
-  const canUseAi = isCapabilityEnabled(disabledCapabilities, 'ai');
   const hasManualControls = canChangeVisibility ||
     canChangeTextColor ||
     canChangeBackground ||
     canResize;
 
   useEffect(() => {
-    if (!selectedPath) return;
+    if (!selectedPath) {
+      setActiveTab('chat');
+      setElementState(EMPTY_STATE);
+      return;
+    }
 
     const updateSelectedElementState = () => {
-      setElementState(readSelectedElementState(selectedPath));
+      setElementState(readSelectedElementState(selectedPath, width));
     };
 
     updateSelectedElementState();
@@ -133,7 +157,7 @@ export function PropertyPanel() {
       window.removeEventListener('resize', updateSelectedElementState);
       window.removeEventListener('scroll', updateSelectedElementState, true);
     };
-  }, [selectedPath]);
+  }, [selectedPath, width]);
 
   const updateOverride = useCallback(
     (changes: Partial<ElementOverride>) => {
@@ -167,40 +191,78 @@ export function PropertyPanel() {
     dispatch({ type: 'REMOVE_OVERRIDE', payload: { path: selectedPath } });
   }, [dispatch, selectedPath]);
 
-  if (!selectedPath) return null;
-
   return (
-    <div data-morph-editor className={`morph-editor-panel morph-editor-panel--${panelSide}`}>
-      <div className="morph-editor-panel__header">
-        <div className="morph-editor-panel__title">Element settings</div>
-        <button
-          className="morph-editor-panel__close"
-          onClick={() => selectElement(null)}
-          aria-label="Close"
-        >
-          x
-        </button>
-      </div>
+    <div
+      data-morph-editor
+      className={`morph-editor-panel morph-editor-panel--${panelSide}`}
+      style={{ width: `${width}px` }}
+    >
+      <div
+        className="morph-editor-panel__resize"
+        onPointerDown={onResizePointerDown}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize panel"
+      />
 
-      <div className="morph-editor-panel__tabs">
+      <header className="morph-editor-panel__header">
+        <div className="morph-editor-panel__brand">
+          <div className="morph-editor-panel__brand-icon" aria-hidden>
+            <SparklesIcon />
+          </div>
+          <div>
+            <h2 className="morph-editor-panel__title">Assistant</h2>
+            {selectedPath ? (
+              <p className="morph-editor-panel__subtitle">Editing · {selectionLabel(selectedPath)}</p>
+            ) : (
+              <p className="morph-editor-panel__subtitle">Layout & styling help</p>
+            )}
+          </div>
+        </div>
         <button
+          type="button"
+          className="morph-editor-panel__close"
+          onClick={onClose}
+          aria-label="Close assistant panel"
+          title="Close assistant"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+          </svg>
+        </button>
+      </header>
+
+      <div className="morph-editor-panel__tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'chat'}
+          className={`morph-editor-panel__tab${activeTab === 'chat' ? ' morph-editor-panel__tab--active' : ''}`}
+          onClick={() => setActiveTab('chat')}
+        >
+          Chat
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'manual'}
           className={`morph-editor-panel__tab${activeTab === 'manual' ? ' morph-editor-panel__tab--active' : ''}`}
           onClick={() => setActiveTab('manual')}
+          disabled={!selectedPath}
+          title={!selectedPath ? 'Select an element on the page' : undefined}
         >
           Manual
         </button>
-        <button
-          className={`morph-editor-panel__tab${activeTab === 'ai' ? ' morph-editor-panel__tab--active' : ''}`}
-          onClick={() => setActiveTab('ai')}
-          disabled={!canUseAi}
-        >
-          AI Prompt
-        </button>
       </div>
 
-      <div className="morph-editor-panel__body">
-        {activeTab === 'manual' ? (
-          <>
+      <div className="morph-editor-panel__body morph-editor-panel__body--flex">
+        {activeTab === 'chat' ? (
+          <AgentChat
+            suggestions={suggestions}
+            suggestionsRefreshing={suggestionsRefreshing}
+          />
+        ) : selectedPath ? (
+          <div className="morph-editor-panel__manual">
             {!hasManualControls && (
               <div className="morph-editor-empty">No manual controls available for this element.</div>
             )}
@@ -241,6 +303,7 @@ export function PropertyPanel() {
               <>
                 <div className="morph-editor-separator" />
                 <button
+                  type="button"
                   className="morph-editor-btn morph-editor-btn--danger morph-editor-btn--full"
                   onClick={resetOverride}
                 >
@@ -248,12 +311,8 @@ export function PropertyPanel() {
                 </button>
               </>
             )}
-          </>
-        ) : canUseAi ? (
-          <AiPromptInput />
-        ) : (
-          <div className="morph-editor-empty">AI prompts are disabled for this element.</div>
-        )}
+          </div>
+        ) : null}
       </div>
     </div>
   );
