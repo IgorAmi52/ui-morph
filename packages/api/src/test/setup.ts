@@ -12,7 +12,9 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await getPool().query('TRUNCATE morph_configs, morph_chat_history RESTART IDENTITY');
+  await getPool().query(
+    'TRUNCATE morph_configs, morph_chat_history, morph_share_actions, morph_shares RESTART IDENTITY',
+  );
 });
 
 afterAll(async () => {

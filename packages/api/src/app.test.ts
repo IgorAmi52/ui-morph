@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
+import { getPool } from './db/client.js';
 
 const app = createApp();
 
@@ -163,6 +164,95 @@ describe('HTTP API', () => {
 
       expect(claims.body).toEqual({ 'morph.div:0': { hidden: true } });
       expect(policies.body).toEqual({ 'morph.div:0': { text: 'Policies copy' } });
+    });
+  });
+
+  describe('shared dashboards', () => {
+    it('creates and fetches a share without mutating normal config', async () => {
+      const overrides = { 'morph.div:0': { text: 'Shared dashboard' } };
+
+      const createRes = await request(app)
+        .post('/shares')
+        .send({
+          userId: 'user-a',
+          viewId: 'dashboard',
+          sessionId: 'client-a',
+          routeId: 'dashboard',
+          sourcePath: '/dashboard',
+          overrides,
+        })
+        .expect(201);
+
+      expect(createRes.body).toMatchObject({
+        userId: 'user-a',
+        viewId: 'dashboard',
+        sessionId: 'client-a',
+        routeId: 'dashboard',
+        sourcePath: '/dashboard',
+        version: 1,
+      });
+      expect(typeof createRes.body.shareId).toBe('string');
+
+      const configRes = await request(app)
+        .get(`/shares/${createRes.body.shareId}/config`)
+        .expect(200);
+      expect(configRes.body).toEqual(overrides);
+
+      const normalConfig = await request(app)
+        .get('/config/user-a/dashboard?sessionId=client-a&routeId=dashboard')
+        .expect(200);
+      expect(normalConfig.body).toEqual({});
+    });
+
+    it('saves shared config, increments version, and logs actions', async () => {
+      const createRes = await request(app)
+        .post('/shares')
+        .send({
+          userId: 'user-a',
+          viewId: 'dashboard',
+          sessionId: 'client-a',
+          routeId: 'dashboard',
+          overrides: { 'morph.div:0': { hidden: true } },
+        })
+        .expect(201);
+
+      const shareId = createRes.body.shareId as string;
+      const next = { 'morph.div:1': { text: 'Edited by B' } };
+
+      await request(app)
+        .put(`/shares/${shareId}/config?sessionId=client-b`)
+        .send({ overrides: next })
+        .expect(200)
+        .expect(next);
+
+      const meta = await request(app).get(`/shares/${shareId}`).expect(200);
+      expect(meta.body.version).toBe(2);
+
+      const actions = await getPool().query<{
+        actor_session_id: string;
+        action: string;
+        version: number;
+      }>(
+        `SELECT actor_session_id, action, version
+         FROM morph_share_actions
+         WHERE share_id = $1
+         ORDER BY id`,
+        [shareId],
+      );
+
+      expect(actions.rows).toEqual([
+        { actor_session_id: 'client-a', action: 'create', version: 1 },
+        { actor_session_id: 'client-b', action: 'save', version: 2 },
+      ]);
+    });
+
+    it('returns 404 for unknown shares', async () => {
+      await request(app).get('/shares/missing-share').expect(404);
+      await request(app).get('/shares/missing-share/config').expect(404);
+      await request(app)
+        .put('/shares/missing-share/config')
+        .send({ overrides: {} })
+        .expect(404);
     });
   });
 

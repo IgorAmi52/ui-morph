@@ -103,3 +103,15 @@ export interface AgentSuggestionsRequest {
 export interface AgentSuggestionsResponse {
   suggestions: string[];
 }
+
+export interface ShareMetadata {
+  shareId: string;
+  userId: string;
+  viewId: string;
+  sessionId: string;
+  routeId: string;
+  sourcePath?: string;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
