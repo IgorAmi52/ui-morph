@@ -52,6 +52,37 @@ describe('createHttpAdapter', () => {
     });
   });
 
+  it('scopes requests with sessionId and routeId when provided', async () => {
+    const config = { 'morph.div:0': { hidden: true } };
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => config,
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const adapter = createHttpAdapter('http://localhost:3001');
+    await expect(
+      adapter.getConfig('user-a', 'dashboard', 'client-a', 'claims'),
+    ).resolves.toEqual(config);
+    await expect(
+      adapter.saveConfig('user-a', 'dashboard', config, 'client-a', 'claims'),
+    ).resolves.toEqual(config);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'http://localhost:3001/config/user-a/dashboard?sessionId=client-a&routeId=claims',
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'http://localhost:3001/config/user-a/dashboard?sessionId=client-a&routeId=claims',
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overrides: config }),
+      },
+    );
+  });
+
   it('throws when GET fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
 

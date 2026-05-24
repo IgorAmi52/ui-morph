@@ -114,7 +114,7 @@ export function PropertyPanel({
   suggestionsRefreshing,
 }: PropertyPanelProps) {
   const { selectedPath, config, dispatch } = useMorphContext();
-  const [activeTab, setActiveTab] = useState<Tab>('chat');
+  const [activeTab, setActiveTab] = useState<Tab>('manual');
   const [elementState, setElementState] = useState<SelectedElementState>(EMPTY_STATE);
   const { width, onResizePointerDown } = useResizablePanel();
 
@@ -131,7 +131,7 @@ export function PropertyPanel({
 
   useEffect(() => {
     if (!selectedPath) {
-      setActiveTab('chat');
+      setActiveTab('manual');
       setElementState(EMPTY_STATE);
       return;
     }

@@ -14,6 +14,8 @@ export type MorphMode = 'view' | 'edit';
 export interface MorphProps {
   userId: string;
   viewId?: string;
+  sessionId?: string;
+  routeId?: string;
   apiUrl?: string;
   mode?: MorphMode;
   editable?: boolean;
@@ -53,13 +55,26 @@ export interface MorphContextValue {
   commitHistoryTransaction: () => void;
   userId: string;
   viewId: string;
+  sessionId: string;
+  routeId: string;
   apiUrl?: string;
   onError?: (error: Error) => void;
 }
 
 export interface StorageAdapter {
-  getConfig(userId: string, viewId: string): Promise<MorphConfig>;
-  saveConfig(userId: string, viewId: string, config: MorphConfig): Promise<MorphConfig>;
+  getConfig(
+    userId: string,
+    viewId: string,
+    sessionId?: string,
+    routeId?: string,
+  ): Promise<MorphConfig>;
+  saveConfig(
+    userId: string,
+    viewId: string,
+    config: MorphConfig,
+    sessionId?: string,
+    routeId?: string,
+  ): Promise<MorphConfig>;
 }
 
 /** Compact tree sent to the layout agent (shared contract with @ui-morph/api). */

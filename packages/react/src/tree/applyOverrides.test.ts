@@ -13,12 +13,13 @@ describe('applyOverride', () => {
     expect(applyOverride(el, { hidden: true }, 'view')).toBeNull();
   });
 
-  it('hides element in edit mode', () => {
+  it('marks hidden element as a preview in edit mode', () => {
     const el = createElement('motion.div', null, 'Hidden');
     const result = applyOverride(el, { hidden: true }, 'edit');
     expect(isValidElement(result)).toBe(true);
     if (isValidElement(result)) {
-      expect((result.props as { style?: { display?: string } }).style?.display).toBe('none');
+      const props = result.props as { 'data-morph-hidden-preview'?: string };
+      expect(props['data-morph-hidden-preview']).toBe('true');
     }
   });
 

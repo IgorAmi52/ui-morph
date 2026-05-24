@@ -47,6 +47,7 @@ export function decoratePaths(container: HTMLElement, rootPath: string): void {
 const ORIGINAL_STYLE_ATTR = 'data-morph-original-style';
 const ORIGINAL_DISPLAY_ATTR = 'data-morph-original-display';
 const ORIGINAL_TEXT_ATTR = 'data-morph-original-text';
+const HIDDEN_PREVIEW_ATTR = 'data-morph-hidden-preview';
 
 function isTextLeaf(el: HTMLElement): boolean {
   return Array.from(el.childNodes).every(
@@ -81,6 +82,8 @@ export function cleanDomOverrides(container: HTMLElement): void {
 
   const decorated = container.querySelectorAll<HTMLElement>('[data-morph-path]');
   decorated.forEach((el) => {
+    el.removeAttribute(HIDDEN_PREVIEW_ATTR);
+
     const origDisplay = el.getAttribute(ORIGINAL_DISPLAY_ATTR);
     if (origDisplay !== null) {
       el.style.display = origDisplay;
@@ -93,6 +96,14 @@ export function cleanDomOverrides(container: HTMLElement): void {
       el.removeAttribute(ORIGINAL_TEXT_ATTR);
     }
   });
+}
+
+function restoreOriginalDisplay(el: HTMLElement): void {
+  const origDisplay = el.getAttribute(ORIGINAL_DISPLAY_ATTR);
+  if (origDisplay === null) return;
+
+  el.style.display = origDisplay;
+  el.removeAttribute(ORIGINAL_DISPLAY_ATTR);
 }
 
 function ensureOrderableParent(parentEl: HTMLElement): void {
@@ -156,18 +167,10 @@ export function applyDomOverrides(
     const path = el.getAttribute('data-morph-path')!;
     const override = config[path];
     if (!override) return;
-    void mode;
 
-    if (override.hidden) {
-      if (!el.hasAttribute(ORIGINAL_DISPLAY_ATTR)) {
-        el.setAttribute(ORIGINAL_DISPLAY_ATTR, el.style.display);
-      }
-      el.style.display = 'none';
-      el.style.opacity = '';
-    } else if (el.hasAttribute(ORIGINAL_DISPLAY_ATTR)) {
-      el.style.display = el.getAttribute(ORIGINAL_DISPLAY_ATTR) ?? '';
-      el.removeAttribute(ORIGINAL_DISPLAY_ATTR);
-      el.style.opacity = '';
+    el.removeAttribute(HIDDEN_PREVIEW_ATTR);
+    if (!(override.hidden && mode === 'view')) {
+      restoreOriginalDisplay(el);
     }
 
     if (override.style) {
@@ -182,6 +185,15 @@ export function applyDomOverrides(
         el.setAttribute(ORIGINAL_TEXT_ATTR, el.textContent ?? '');
       }
       el.textContent = override.text;
+    }
+
+    if (override.hidden && mode === 'view') {
+      if (!el.hasAttribute(ORIGINAL_DISPLAY_ATTR)) {
+        el.setAttribute(ORIGINAL_DISPLAY_ATTR, el.style.display);
+      }
+      el.style.display = 'none';
+    } else if (override.hidden && mode === 'edit') {
+      el.setAttribute(HIDDEN_PREVIEW_ATTR, 'true');
     }
   });
 }

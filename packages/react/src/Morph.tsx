@@ -2,22 +2,19 @@ import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react
 import type { MorphProps, MorphConfig, MorphMode } from './types';
 import { ConfigProvider, useMorphContext } from './config/ConfigContext';
 import { createAdapter } from './config/createAdapter';
+import { resolveSessionId } from './config/clientSession';
+import { useRouteScope } from './config/routeScope';
 import { EditModeProvider } from './editor/EditModeProvider';
 import { MorphToggleButton } from './editor/MorphToggleButton';
 import { decoratePaths, applyDomOverrides, cleanDomOverrides } from './tree/domDecorator';
 
 const EMPTY_CONFIG: MorphConfig = {};
 
-function resolveViewId(explicit?: string): string {
-  if (explicit) return explicit;
-  if (typeof window === 'undefined') return 'default';
-  const path = window.location.pathname;
-  return path === '/' ? 'index' : path.replace(/^\/|\/$/g, '').replace(/\//g, '-');
-}
-
 export function Morph({
   userId,
   viewId: viewIdProp,
+  sessionId: sessionIdProp,
+  routeId: routeIdProp,
   apiUrl,
   mode,
   editable = false,
@@ -26,11 +23,18 @@ export function Morph({
   fallback,
   children,
 }: MorphProps) {
-  const viewId = resolveViewId(viewIdProp);
+  const { viewId, routeId } = useRouteScope(viewIdProp, routeIdProp);
+  const sessionId = useState(() => resolveSessionId(sessionIdProp))[0];
   const usesRemoteConfig = Boolean(apiUrl);
-  const [config, setConfig] = useState<MorphConfig | null>(() => (
-    usesRemoteConfig ? null : EMPTY_CONFIG
-  ));
+  const scopeKey = `${apiUrl ?? ''}\u0000${userId}\u0000${viewId}\u0000${sessionId}\u0000${routeId}`;
+  const [configState, setConfigState] = useState<{
+    scopeKey: string;
+    config: MorphConfig | null;
+  }>(() => ({
+    scopeKey,
+    config: usesRemoteConfig ? null : EMPTY_CONFIG,
+  }));
+  const config = configState.scopeKey === scopeKey ? configState.config : null;
   const [internalMode, setInternalMode] = useState<MorphMode>('view');
   const adapterRef = useRef(createAdapter(apiUrl));
 
@@ -44,38 +48,39 @@ export function Morph({
   const exposedToggle = (!isControlled && editable) ? toggleMode : null;
 
   const handleSave = useCallback((saved: MorphConfig) => {
-    setConfig(saved);
+    setConfigState({ scopeKey, config: saved });
     onSave?.(saved);
-  }, [onSave]);
+  }, [onSave, scopeKey]);
 
   useEffect(() => {
     if (!usesRemoteConfig) {
-      setConfig(EMPTY_CONFIG);
+      setConfigState({ scopeKey, config: EMPTY_CONFIG });
       return;
     }
 
     let cancelled = false;
-    setConfig(null);
+    setConfigState({ scopeKey, config: null });
 
     adapterRef.current
-      .getConfig(userId, viewId)
+      .getConfig(userId, viewId, sessionId, routeId)
       .then((cfg) => {
-        if (!cancelled) setConfig(cfg);
+        if (!cancelled) setConfigState({ scopeKey, config: cfg });
       })
       .catch((err) => {
         if (!cancelled) {
-          setConfig({});
+          setConfigState({ scopeKey, config: {} });
           onError?.(err instanceof Error ? err : new Error(String(err)));
         }
       });
 
     return () => { cancelled = true; };
-  }, [usesRemoteConfig, userId, viewId, onError]);
+  }, [usesRemoteConfig, userId, viewId, sessionId, routeId, scopeKey, onError]);
 
-  if (config === null && fallback) return <>{fallback}</>;
+  if (config === null) return fallback ? <>{fallback}</> : null;
 
   return (
     <ConfigProvider
+      key={scopeKey}
       mode={activeMode}
       editable={editable}
       toggleMode={exposedToggle}
@@ -83,6 +88,8 @@ export function Morph({
       adapter={adapterRef.current}
       userId={userId}
       viewId={viewId}
+      sessionId={sessionId}
+      routeId={routeId}
       apiUrl={apiUrl}
       onSave={handleSave}
       onError={onError}

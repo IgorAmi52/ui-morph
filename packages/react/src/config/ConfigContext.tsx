@@ -22,6 +22,8 @@ interface ConfigProviderProps {
   adapter: StorageAdapter;
   userId: string;
   viewId: string;
+  sessionId: string;
+  routeId: string;
   apiUrl?: string;
   onSave?: (config: MorphConfig) => void;
   onError?: (error: Error) => void;
@@ -40,6 +42,8 @@ export function ConfigProvider({
   adapter,
   userId,
   viewId,
+  sessionId,
+  routeId,
   apiUrl,
   onSave,
   onError,
@@ -133,7 +137,13 @@ export function ConfigProvider({
   const saveConfig = useCallback(async (): Promise<boolean> => {
     try {
       const latestConfig = configRef.current;
-      const savedConfig = await adapter.saveConfig(userId, viewId, latestConfig);
+      const savedConfig = await adapter.saveConfig(
+        userId,
+        viewId,
+        latestConfig,
+        sessionId,
+        routeId,
+      );
       resetToSaved(savedConfig);
       onSave?.(savedConfig);
       return true;
@@ -141,7 +151,7 @@ export function ConfigProvider({
       onError?.(err instanceof Error ? err : new Error(String(err)));
       return false;
     }
-  }, [adapter, userId, viewId, resetToSaved, onSave, onError]);
+  }, [adapter, userId, viewId, sessionId, routeId, resetToSaved, onSave, onError]);
 
   const canUndo = historyRef.current.past.length > 0;
   const canRedo = historyRef.current.future.length > 0;
@@ -165,6 +175,8 @@ export function ConfigProvider({
     commitHistoryTransaction,
     userId,
     viewId,
+    sessionId,
+    routeId,
     apiUrl,
     onError,
   };

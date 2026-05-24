@@ -73,6 +73,21 @@ describe('applyDomOverrides', () => {
     expect(h1.style.color).toBe('red');
     expect(h1.textContent).toBe('New title');
     expect(p.style.display).toBe('none');
+    expect(p.hasAttribute('data-morph-hidden-preview')).toBe(false);
+  });
+
+  it('shows hidden elements as selectable previews in edit mode', () => {
+    const root = buildSampleTree();
+    decoratePaths(root, 'morph');
+
+    applyDomOverrides(root, {
+      'morph.id:header.p:0': { hidden: true },
+    }, 'edit');
+
+    const p = root.querySelector('[data-morph-path="morph.id:header.p:0"]') as HTMLElement;
+
+    expect(p.style.display).not.toBe('none');
+    expect(p.getAttribute('data-morph-hidden-preview')).toBe('true');
   });
 
   it('reorders children by segment', () => {
@@ -100,15 +115,18 @@ describe('applyDomOverrides', () => {
 
     const config = {
       'morph.id:header.h1:0': { style: { color: 'red' }, text: 'Changed' },
+      'morph.id:header.p:0': { hidden: true },
       'morph.id:header': { childOrder: ['p:0', 'h1:0'] },
     };
 
-    applyDomOverrides(root, config, 'view');
+    applyDomOverrides(root, config, 'edit');
     cleanDomOverrides(root);
 
     const h1 = root.querySelector('[data-morph-path="morph.id:header.h1:0"]') as HTMLElement;
+    const p = root.querySelector('[data-morph-path="morph.id:header.p:0"]') as HTMLElement;
     expect(h1.textContent).toBe('Title');
     expect(h1.style.color).toBe('');
+    expect(p.hasAttribute('data-morph-hidden-preview')).toBe(false);
 
     const header = root.querySelector('[data-morph-id="header"]')!;
     const segments = Array.from(header.children).map((child) =>

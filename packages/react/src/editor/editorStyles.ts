@@ -1084,6 +1084,13 @@ const EDITOR_STYLES = `
   outline-offset: 2px;
 }
 
+[data-morph-hidden-preview="true"] {
+  opacity: 0.45 !important;
+  outline: 1px dashed #dc2626 !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.08);
+}
+
 .morph-editor-toolbar {
   position: fixed;
   bottom: 24px;

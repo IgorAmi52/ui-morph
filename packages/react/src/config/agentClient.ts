@@ -18,6 +18,15 @@ async function parseAgentError(res: Response, fallback: string): Promise<never> 
   throw new Error(body || fallback);
 }
 
+function scopedUrl(apiUrl: string, path: string, sessionId?: string, routeId?: string): string {
+  const base = `${apiUrl.replace(/\/$/, '')}${path}`;
+  const params = new URLSearchParams();
+  if (sessionId) params.set('sessionId', sessionId);
+  if (routeId) params.set('routeId', routeId);
+  const query = params.toString();
+  return query ? `${base}?${query}` : base;
+}
+
 export async function fetchAgentSuggestions(
   apiUrl: string,
   request: AgentSuggestionsRequest,
@@ -56,9 +65,16 @@ export async function fetchChatHistory(
   apiUrl: string,
   userId: string,
   viewId: string,
+  sessionId?: string,
+  routeId?: string,
 ): Promise<StoredChatMessage[]> {
   const res = await fetch(
-    `${apiUrl.replace(/\/$/, '')}/chat/${encodeURIComponent(userId)}/${encodeURIComponent(viewId)}`,
+    scopedUrl(
+      apiUrl,
+      `/chat/${encodeURIComponent(userId)}/${encodeURIComponent(viewId)}`,
+      sessionId,
+      routeId,
+    ),
   );
   if (!res.ok) {
     await parseAgentError(res, `Chat history fetch failed: ${res.status}`);
@@ -72,9 +88,16 @@ export async function saveChatHistory(
   userId: string,
   viewId: string,
   messages: StoredChatMessage[],
+  sessionId?: string,
+  routeId?: string,
 ): Promise<StoredChatMessage[]> {
   const res = await fetch(
-    `${apiUrl.replace(/\/$/, '')}/chat/${encodeURIComponent(userId)}/${encodeURIComponent(viewId)}`,
+    scopedUrl(
+      apiUrl,
+      `/chat/${encodeURIComponent(userId)}/${encodeURIComponent(viewId)}`,
+      sessionId,
+      routeId,
+    ),
     {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },

@@ -34,6 +34,8 @@ export function AgentChat({
     selectedPath,
     userId,
     viewId,
+    sessionId,
+    routeId,
     apiUrl,
     saveConfig,
     onError,
@@ -58,7 +60,7 @@ export function AgentChat({
   useEffect(() => {
     if (!apiUrl) return;
     let cancelled = false;
-    void fetchChatHistory(apiUrl, userId, viewId)
+    void fetchChatHistory(apiUrl, userId, viewId, sessionId, routeId)
       .then((stored) => {
         if (!cancelled) {
           setHistory(fromStoredMessages(stored));
@@ -71,17 +73,24 @@ export function AgentChat({
     return () => {
       cancelled = true;
     };
-  }, [apiUrl, userId, viewId]);
+  }, [apiUrl, userId, viewId, sessionId, routeId]);
 
   useEffect(() => {
     if (!apiUrl || !historyLoaded) return;
     const timer = window.setTimeout(() => {
-      void saveChatHistory(apiUrl, userId, viewId, serializeLiveHistory(history)).catch(
+      void saveChatHistory(
+        apiUrl,
+        userId,
+        viewId,
+        serializeLiveHistory(history),
+        sessionId,
+        routeId,
+      ).catch(
         () => undefined,
       );
     }, 400);
     return () => window.clearTimeout(timer);
-  }, [apiUrl, history, historyLoaded, userId, viewId]);
+  }, [apiUrl, history, historyLoaded, userId, viewId, sessionId, routeId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
