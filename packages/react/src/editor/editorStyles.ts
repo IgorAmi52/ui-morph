@@ -180,48 +180,6 @@ const EDITOR_STYLES = `
   color: var(--morph-panel-text);
 }
 
-.morph-editor-panel-reopen {
-  position: fixed;
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%);
-  z-index: 10002;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 10px;
-  border: 1px solid var(--morph-panel-border, #e2e8f0);
-  border-right: none;
-  border-radius: 12px 0 0 12px;
-  background: var(--morph-panel-surface, #fff);
-  color: var(--morph-panel-accent, #0891b2);
-  cursor: pointer;
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  line-height: 0;
-  box-shadow: -4px 0 16px rgba(15, 23, 42, 0.08);
-  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
-}
-
-.morph-editor-panel-reopen:hover {
-  background: var(--morph-panel-accent-soft, #ecfeff);
-  box-shadow: -6px 0 20px rgba(8, 145, 178, 0.12);
-}
-
-.morph-editor-panel-reopen .morph-editor-sparkles {
-  width: 22px;
-  height: 22px;
-}
-
-.morph-editor-panel-reopen span {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  line-height: 1.2;
-}
-
 .morph-editor-panel__tabs {
   display: flex;
   gap: 4px;
@@ -1132,7 +1090,8 @@ const EDITOR_STYLES = `
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
   padding: 8px 12px;
   background: #fff;
   border: 1px solid #e2e8f0;
@@ -1140,6 +1099,147 @@ const EDITOR_STYLES = `
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   z-index: 10003;
   font-family: system-ui, -apple-system, sans-serif;
+}
+
+.morph-editor-toolbar__history {
+  display: flex;
+  gap: 4px;
+  padding-right: 12px;
+  border-right: 1px solid #e2e8f0;
+}
+
+.morph-editor-toolbar__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.morph-editor-btn--icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.morph-editor-btn--icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.morph-editor-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.morph-editor-dragging [data-morph-path]:hover {
+  outline: none;
+}
+
+.morph-editor-dragging [data-morph-path] {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.morph-editor-resize-handle {
+  position: absolute;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  background: #0891b2;
+  box-shadow: 0 1px 4px rgba(8, 145, 178, 0.35);
+  cursor: nwse-resize;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.morph-editor-resize-handle:hover {
+  background: #0e7490;
+}
+
+.morph-editor-resize-handle--n,
+.morph-editor-resize-handle--s {
+  left: 50%;
+  width: 36px;
+  height: 10px;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.morph-editor-resize-handle--n {
+  top: -6px;
+}
+
+.morph-editor-resize-handle--s {
+  bottom: -6px;
+}
+
+.morph-editor-resize-handle--e,
+.morph-editor-resize-handle--w {
+  top: 50%;
+  width: 10px;
+  height: 36px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.morph-editor-resize-handle--e {
+  right: -6px;
+}
+
+.morph-editor-resize-handle--w {
+  left: -6px;
+}
+
+.morph-editor-resize-handle--ne,
+.morph-editor-resize-handle--nw,
+.morph-editor-resize-handle--se,
+.morph-editor-resize-handle--sw {
+  width: 12px;
+  height: 12px;
+}
+
+.morph-editor-resize-handle--ne {
+  top: -7px;
+  right: -7px;
+  cursor: nesw-resize;
+}
+
+.morph-editor-resize-handle--nw {
+  top: -7px;
+  left: -7px;
+  cursor: nwse-resize;
+}
+
+.morph-editor-resize-handle--se {
+  right: -7px;
+  bottom: -7px;
+  cursor: nwse-resize;
+}
+
+.morph-editor-resize-handle--sw {
+  bottom: -7px;
+  left: -7px;
+  cursor: nesw-resize;
+}
+
+.morph-editor-split-handle {
+  position: fixed;
+  width: 10px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  background: #0891b2;
+  box-shadow: 0 1px 4px rgba(8, 145, 178, 0.35);
+  transform: translateX(-50%);
+  cursor: col-resize;
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 10002;
+}
+
+.morph-editor-split-handle:hover {
+  background: #0e7490;
 }
 
 .morph-editor-separator {
@@ -1216,10 +1316,6 @@ const EDITOR_STYLES = `
   pointer-events: none;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   border-radius: 4px;
-}
-
-.morph-editor-dragging [data-morph-path]:hover {
-  outline: none;
 }
 `;
 

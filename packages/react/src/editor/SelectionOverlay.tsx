@@ -8,6 +8,13 @@ import {
 } from 'react';
 import { useMorphContext } from '../config/ConfigContext';
 import { getDisabledCapabilities, isCapabilityEnabled } from './capabilities';
+import {
+  applyBoundaryDelta,
+  formatFrTracks,
+  getGridSplitContext,
+  type GridSplitContext,
+  type GridSplitHandle,
+} from './gridSplitResize';
 
 interface SelectionOverlayProps {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -59,7 +66,8 @@ function supportsBoxResize(el: HTMLElement): boolean {
   return getComputedStyle(el).display !== 'inline';
 }
 
-function getBoxResizeDirections(el: HTMLElement): ResizeDirection[] {
+function getBoxResizeDirections(el: HTMLElement, inFluidGrid: boolean): ResizeDirection[] {
+  if (inFluidGrid) return [];
   if (!supportsBoxResize(el)) return [];
   if (!isCapabilityEnabled(getDisabledCapabilities(el), 'resize')) return [];
   return RESIZE_DIRECTIONS;
@@ -151,18 +159,32 @@ function getResizeBounds(el: HTMLElement, rect: DOMRect): ResizeBounds {
   };
 }
 
+interface GridSplitDragState {
+  boundaryIndex: number;
+  parentPath: string;
+  startX: number;
+  startTracks: number[];
+  totalWeight: number;
+  parentWidth: number;
+}
+
 export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
-  const { selectedPath, config, dispatch } = useMorphContext();
+  const { selectedPath, config, dispatch, beginHistoryTransaction, commitHistoryTransaction } = useMorphContext();
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [resizeDirections, setResizeDirections] = useState<ResizeDirection[]>([]);
+  const [gridSplit, setGridSplit] = useState<GridSplitContext | null>(null);
   const resizeStateRef = useRef<ResizeState | null>(null);
+  const gridSplitDragRef = useRef<GridSplitDragState | null>(null);
   const pendingBoxStyleRef = useRef<PendingBoxStyle | null>(null);
   const frameRef = useRef<number | null>(null);
+  const pendingGridTracksRef = useRef<number[] | null>(null);
+  const gridFrameRef = useRef<number | null>(null);
 
   const updateRect = useCallback(() => {
     if (!selectedPath || !containerRef.current) {
       setRect(null);
       setResizeDirections([]);
+      setGridSplit(null);
       return;
     }
     const el = containerRef.current.querySelector<HTMLElement>(
@@ -170,12 +192,20 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
     );
     if (el) {
       setRect(el.getBoundingClientRect());
-      setResizeDirections(getBoxResizeDirections(el));
+      const parent = el.parentElement;
+      const parentPath = parent?.getAttribute('data-morph-path') ?? undefined;
+      const parentStyleOverride = parentPath ? config[parentPath]?.style : undefined;
+      const splitContext = isCapabilityEnabled(getDisabledCapabilities(el), 'resize')
+        ? getGridSplitContext(el, parentStyleOverride)
+        : null;
+      setGridSplit(splitContext);
+      setResizeDirections(getBoxResizeDirections(el, Boolean(splitContext)));
     } else {
       setRect(null);
       setResizeDirections([]);
+      setGridSplit(null);
     }
-  }, [selectedPath, containerRef]);
+  }, [selectedPath, containerRef, config]);
 
   const updateSelectedBox = useCallback((style: PendingBoxStyle) => {
     if (!selectedPath) return;
@@ -207,12 +237,111 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
     }
   }, [flushPendingBoxStyle]);
 
+  const updateParentGridTracks = useCallback((parentPath: string, tracks: number[]) => {
+    dispatch({
+      type: 'SET_OVERRIDE',
+      payload: {
+        path: parentPath,
+        override: {
+          style: {
+            ...(config[parentPath]?.style ?? {}),
+            gridTemplateColumns: formatFrTracks(tracks),
+          },
+        },
+      },
+    });
+  }, [config, dispatch]);
+
+  const flushPendingGridTracks = useCallback(() => {
+    gridFrameRef.current = null;
+    const pending = pendingGridTracksRef.current;
+    const drag = gridSplitDragRef.current;
+    pendingGridTracksRef.current = null;
+    if (pending && drag) {
+      updateParentGridTracks(drag.parentPath, pending);
+    }
+  }, [updateParentGridTracks]);
+
+  const scheduleParentGridTracks = useCallback((tracks: number[]) => {
+    pendingGridTracksRef.current = tracks;
+    if (gridFrameRef.current === null) {
+      gridFrameRef.current = window.requestAnimationFrame(flushPendingGridTracks);
+    }
+  }, [flushPendingGridTracks]);
+
+  const startGridSplit = useCallback((handle: GridSplitHandle, event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!gridSplit) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const startTracks = [...gridSplit.tracks];
+    gridSplitDragRef.current = {
+      boundaryIndex: handle.boundaryIndex,
+      parentPath: gridSplit.parentPath,
+      startX: event.clientX,
+      startTracks,
+      totalWeight: startTracks.reduce((sum, track) => sum + track, 0),
+      parentWidth: gridSplit.parentWidth,
+    };
+
+    beginHistoryTransaction();
+
+    const previousCursor = document.documentElement.style.cursor;
+    const previousUserSelect = document.documentElement.style.userSelect;
+    document.documentElement.style.cursor = 'col-resize';
+    document.documentElement.style.userSelect = 'none';
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const drag = gridSplitDragRef.current;
+      if (!drag) return;
+      moveEvent.preventDefault();
+
+      const dx = moveEvent.clientX - drag.startX;
+      const weightDelta = drag.parentWidth > 0
+        ? (dx / drag.parentWidth) * drag.totalWeight
+        : 0;
+      const nextTracks = applyBoundaryDelta(drag.startTracks, drag.boundaryIndex, weightDelta);
+      if (nextTracks) scheduleParentGridTracks(nextTracks);
+    };
+
+    const finishGridSplit = () => {
+      if (gridFrameRef.current !== null) {
+        window.cancelAnimationFrame(gridFrameRef.current);
+        gridFrameRef.current = null;
+      }
+      const pending = pendingGridTracksRef.current;
+      const drag = gridSplitDragRef.current;
+      pendingGridTracksRef.current = null;
+      if (pending && drag) updateParentGridTracks(drag.parentPath, pending);
+      commitHistoryTransaction();
+      gridSplitDragRef.current = null;
+      document.documentElement.style.cursor = previousCursor;
+      document.documentElement.style.userSelect = previousUserSelect;
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', finishGridSplit);
+      window.removeEventListener('pointercancel', finishGridSplit);
+      updateRect();
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', finishGridSplit);
+    window.addEventListener('pointercancel', finishGridSplit);
+  }, [
+    beginHistoryTransaction,
+    commitHistoryTransaction,
+    gridSplit,
+    scheduleParentGridTracks,
+    updateParentGridTracks,
+    updateRect,
+  ]);
+
   const startResize = useCallback((direction: ResizeDirection, event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!selectedPath || !containerRef.current) return;
     const el = containerRef.current.querySelector<HTMLElement>(
       `[data-morph-path="${CSS.escape(selectedPath)}"]`,
     );
-    if (!el || !getBoxResizeDirections(el).includes(direction)) return;
+    if (!el || !getBoxResizeDirections(el, Boolean(gridSplit)).includes(direction)) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -237,6 +366,8 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
         : getNumericStyleValue(computed.marginTop, 0),
       ...bounds,
     };
+
+    beginHistoryTransaction();
 
     const previousCursor = document.documentElement.style.cursor;
     const previousUserSelect = document.documentElement.style.userSelect;
@@ -307,6 +438,7 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
       const pending = pendingBoxStyleRef.current;
       pendingBoxStyleRef.current = null;
       if (pending) updateSelectedBox(pending);
+      commitHistoryTransaction();
       resizeStateRef.current = null;
       document.documentElement.style.cursor = previousCursor;
       document.documentElement.style.userSelect = previousUserSelect;
@@ -318,7 +450,7 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', finishResize);
     window.addEventListener('pointercancel', finishResize);
-  }, [containerRef, scheduleSelectedBox, selectedPath, updateSelectedBox]);
+  }, [containerRef, gridSplit, scheduleSelectedBox, selectedPath, updateSelectedBox, beginHistoryTransaction, commitHistoryTransaction]);
 
   useEffect(() => {
     updateRect();
@@ -341,33 +473,54 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
     if (frameRef.current !== null) {
       window.cancelAnimationFrame(frameRef.current);
     }
+    if (gridFrameRef.current !== null) {
+      window.cancelAnimationFrame(gridFrameRef.current);
+    }
   }, []);
 
   if (!rect) return null;
 
   return (
-    <div
-      data-morph-editor
-      className="morph-editor-selection"
-      style={{
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      }}
-    >
-      {resizeDirections.length > 0 && (
-        resizeDirections.map((direction) => (
-          <button
-            key={direction}
-            type="button"
-            className={`morph-editor-resize-handle morph-editor-resize-handle--${direction}`}
-            onPointerDown={(event) => startResize(direction, event)}
-            aria-label={`Resize element ${direction}`}
-            title="Resize element"
-          />
-        ))
-      )}
-    </div>
+    <>
+      <div
+        data-morph-editor
+        className="morph-editor-selection"
+        style={{
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+        }}
+      >
+        {resizeDirections.length > 0 && (
+          resizeDirections.map((direction) => (
+            <button
+              key={direction}
+              type="button"
+              className={`morph-editor-resize-handle morph-editor-resize-handle--${direction}`}
+              onPointerDown={(event) => startResize(direction, event)}
+              aria-label={`Resize element ${direction}`}
+              title="Resize element"
+            />
+          ))
+        )}
+      </div>
+      {gridSplit?.handles.map((handle) => (
+        <button
+          key={handle.boundaryIndex}
+          type="button"
+          data-morph-editor
+          className="morph-editor-split-handle"
+          style={{
+            top: handle.top,
+            left: handle.left,
+            height: handle.height,
+          }}
+          onPointerDown={(event) => startGridSplit(handle, event)}
+          aria-label="Resize column split"
+          title="Drag to resize columns"
+        />
+      ))}
+    </>
   );
 }

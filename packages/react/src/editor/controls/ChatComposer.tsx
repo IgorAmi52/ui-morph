@@ -6,7 +6,6 @@ interface ChatComposerProps {
   onSubmit: () => void;
   disabled?: boolean;
   placeholder?: string;
-  selectionLabel?: string;
 }
 
 export function ChatComposer({
@@ -15,7 +14,6 @@ export function ChatComposer({
   onSubmit,
   disabled = false,
   placeholder = 'Describe a change…',
-  selectionLabel,
 }: ChatComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -28,12 +26,6 @@ export function ChatComposer({
 
   return (
     <div className={`morph-chat-composer${disabled ? ' morph-chat-composer--disabled' : ''}`}>
-      {selectionLabel && (
-        <div className="morph-chat-composer__selection" title={selectionLabel}>
-          <span className="morph-chat-composer__selection-label">Selected</span>
-          <span className="morph-chat-composer__selection-value">{selectionLabel}</span>
-        </div>
-      )}
       <div className="morph-chat-composer__box">
         <textarea
           ref={textareaRef}

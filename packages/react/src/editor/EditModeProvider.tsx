@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { injectEditorStyles, removeEditorStyles } from './editorStyles';
 import { SelectionOverlay } from './SelectionOverlay';
 import { PropertyPanel } from './PropertyPanel';
-import { PanelReopenButton } from './PanelReopenButton';
 import { DndSortManager } from './DndSortManager';
 import { DragHandleLayer } from './DragHandleLayer';
 import { useMorphContext } from '../config/ConfigContext';
@@ -64,12 +63,30 @@ function resolveSelectionElement(target: HTMLElement, clientX: number, clientY: 
   return morphEl;
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+}
+
 export function EditModeProvider({ active, children }: EditModeProviderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { selectElement, saveConfig, toggleMode, userId, viewId, apiUrl, config, selectedPath } =
-    useMorphContext();
+  const {
+    selectElement,
+    saveConfig,
+    discardChanges,
+    toggleMode,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    userId,
+    viewId,
+    apiUrl,
+  } = useMorphContext();
   const [isDragging, setIsDragging] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'error'>('idle');
 
   const { suggestions, suggestionsRefreshing } = useLayoutSuggestions({
     enabled: active && panelOpen && Boolean(apiUrl),
@@ -77,8 +94,6 @@ export function EditModeProvider({ active, children }: EditModeProviderProps) {
     containerRef,
     userId,
     viewId,
-    config,
-    selectedPath,
   });
 
   useLayoutEffect(() => {
@@ -90,6 +105,35 @@ export function EditModeProvider({ active, children }: EditModeProviderProps) {
   useEffect(() => {
     if (!active) setIsDragging(false);
   }, [active]);
+
+  useEffect(() => {
+    if (!active) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isEditableTarget(event.target)) return;
+      const mod = event.metaKey || event.ctrlKey;
+      if (!mod) return;
+
+      const key = event.key.toLowerCase();
+      if (key === 'z' && !event.shiftKey) {
+        event.preventDefault();
+        if (canUndo) undo();
+        return;
+      }
+      if (key === 'z' && event.shiftKey) {
+        event.preventDefault();
+        if (canRedo) redo();
+        return;
+      }
+      if (key === 'y') {
+        event.preventDefault();
+        if (canRedo) redo();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [active, canUndo, canRedo, undo, redo]);
 
   const handleSelectElement = useCallback(
     (path: string | null) => {
@@ -103,6 +147,18 @@ export function EditModeProvider({ active, children }: EditModeProviderProps) {
     selectElement(null);
     setPanelOpen(false);
   }, [selectElement]);
+
+  const handleSave = useCallback(async () => {
+    setSaveState('saving');
+    const ok = await saveConfig();
+    if (ok) {
+      setSaveState('idle');
+      toggleMode?.();
+      return;
+    }
+    setSaveState('error');
+    window.setTimeout(() => setSaveState('idle'), 2500);
+  }, [saveConfig, toggleMode]);
 
   const handleClickCapture = useCallback((e: React.MouseEvent) => {
     if (!active) return;
@@ -142,30 +198,63 @@ export function EditModeProvider({ active, children }: EditModeProviderProps) {
             <>
               <DragHandleLayer containerRef={containerRef} />
               <SelectionOverlay containerRef={containerRef} />
-              {panelOpen ? (
+              {panelOpen && (
                 <PropertyPanel
                   onClose={closePanel}
                   suggestions={suggestions}
                   suggestionsRefreshing={suggestionsRefreshing}
                 />
-              ) : (
-                <PanelReopenButton onClick={() => setPanelOpen(true)} />
               )}
               <div data-morph-editor className="morph-editor-toolbar">
-                {toggleMode && (
-                  <button className="morph-editor-btn" onClick={toggleMode} aria-label="Exit edit mode">
-                    Exit
+                <div className="morph-editor-toolbar__history">
+                  <button
+                    type="button"
+                    className="morph-editor-btn morph-editor-btn--icon"
+                    onClick={undo}
+                    disabled={!canUndo}
+                    aria-label="Undo"
+                    title="Undo (Ctrl+Z)"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      <path d="M9 7H5v4M5 11c1.5-3 4.5-5 8-5 4.4 0 8 3.6 8 8s-3.6 8-8 8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                   </button>
-                )}
-                <button
-                  className="morph-editor-btn morph-editor-btn--primary"
-                  onClick={async () => {
-                    const ok = await saveConfig();
-                    if (ok) toggleMode?.();
-                  }}
-                >
-                  Save
-                </button>
+                  <button
+                    type="button"
+                    className="morph-editor-btn morph-editor-btn--icon"
+                    onClick={redo}
+                    disabled={!canRedo}
+                    aria-label="Redo"
+                    title="Redo (Ctrl+Shift+Z)"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      <path d="M15 7h4v4M19 11c-1.5-3-4.5-5-8-5-4.4 0-8 3.6-8 8s3.6 8 8 8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="morph-editor-toolbar__actions">
+                  {toggleMode && (
+                    <button
+                      type="button"
+                      className="morph-editor-btn"
+                      onClick={() => {
+                        discardChanges();
+                        toggleMode();
+                      }}
+                      aria-label="Exit edit mode without saving"
+                    >
+                      Exit
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="morph-editor-btn morph-editor-btn--primary"
+                    onClick={() => void handleSave()}
+                    disabled={saveState === 'saving'}
+                  >
+                    {saveState === 'saving' ? 'Saving…' : saveState === 'error' ? 'Save failed' : 'Save'}
+                  </button>
+                </div>
               </div>
             </>
           )}

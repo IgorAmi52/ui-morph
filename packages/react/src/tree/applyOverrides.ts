@@ -23,7 +23,7 @@ export function applyOverride(
   if (override.hidden && mode === 'edit') {
     const current = (propsToMerge.style as Record<string, string>) ??
       (props.style as Record<string, string> | undefined) ?? {};
-    propsToMerge.style = { ...current, opacity: '0.3' };
+    propsToMerge.style = { ...current, display: 'none' };
   }
 
   if (Object.keys(propsToMerge).length === 0) return element;

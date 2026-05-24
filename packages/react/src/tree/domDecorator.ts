@@ -156,16 +156,18 @@ export function applyDomOverrides(
     const path = el.getAttribute('data-morph-path')!;
     const override = config[path];
     if (!override) return;
+    void mode;
 
     if (override.hidden) {
       if (!el.hasAttribute(ORIGINAL_DISPLAY_ATTR)) {
         el.setAttribute(ORIGINAL_DISPLAY_ATTR, el.style.display);
       }
-      if (mode === 'view') {
-        el.style.display = 'none';
-      } else {
-        el.style.opacity = '0.3';
-      }
+      el.style.display = 'none';
+      el.style.opacity = '';
+    } else if (el.hasAttribute(ORIGINAL_DISPLAY_ATTR)) {
+      el.style.display = el.getAttribute(ORIGINAL_DISPLAY_ATTR) ?? '';
+      el.removeAttribute(ORIGINAL_DISPLAY_ATTR);
+      el.style.opacity = '';
     }
 
     if (override.style) {

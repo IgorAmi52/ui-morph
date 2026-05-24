@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import type { RefObject } from 'react';
-import type { MorphConfig } from '../types';
 import { serializeLayoutSnapshot } from '../agent/serializeLayoutSnapshot';
 import { compactLayoutSnapshot } from '../agent/compactLayoutSnapshot';
 import { deriveLayoutSuggestions } from '../agent/deriveLayoutSuggestions';
@@ -12,8 +11,6 @@ interface UseLayoutSuggestionsOptions {
   containerRef: RefObject<HTMLDivElement | null>;
   userId: string;
   viewId: string;
-  config: MorphConfig;
-  selectedPath: string | null;
 }
 
 export function useLayoutSuggestions({
@@ -22,21 +19,23 @@ export function useLayoutSuggestions({
   containerRef,
   userId,
   viewId,
-  config,
-  selectedPath,
 }: UseLayoutSuggestionsOptions): {
   suggestions: string[];
   suggestionsRefreshing: boolean;
 } {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [suggestionsRefreshing, setSuggestionsRefreshing] = useState(false);
+  const loadedRef = useRef(false);
 
   useEffect(() => {
     if (!enabled || !apiUrl) {
+      loadedRef.current = false;
       setSuggestions([]);
       setSuggestionsRefreshing(false);
       return;
     }
+
+    if (loadedRef.current) return;
 
     let cancelled = false;
     let rafId = 0;
@@ -48,12 +47,14 @@ export function useLayoutSuggestions({
         return;
       }
 
+      loadedRef.current = true;
+
       const snapshot = serializeLayoutSnapshot(container, {
         viewId,
-        config,
-        selectedPath,
+        config: {},
+        selectedPath: undefined,
       });
-      const fallback = deriveLayoutSuggestions(snapshot, selectedPath);
+      const fallback = deriveLayoutSuggestions(snapshot, null);
 
       if (!cancelled) {
         setSuggestions(fallback);
@@ -63,9 +64,8 @@ export function useLayoutSuggestions({
       void fetchAgentSuggestions(apiUrl, {
         userId,
         viewId,
-        selectedPath: selectedPath ?? undefined,
         snapshot: compactLayoutSnapshot(snapshot),
-        config,
+        config: {},
       })
         .then((res) => {
           if (!cancelled && res.suggestions.length > 0) {
@@ -86,7 +86,7 @@ export function useLayoutSuggestions({
       cancelled = true;
       cancelAnimationFrame(rafId);
     };
-  }, [apiUrl, config, containerRef, enabled, selectedPath, userId, viewId]);
+  }, [apiUrl, containerRef, enabled, userId, viewId]);
 
   return { suggestions, suggestionsRefreshing };
 }

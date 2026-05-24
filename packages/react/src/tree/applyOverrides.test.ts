@@ -13,12 +13,12 @@ describe('applyOverride', () => {
     expect(applyOverride(el, { hidden: true }, 'view')).toBeNull();
   });
 
-  it('applies opacity in edit mode when hidden', () => {
+  it('hides element in edit mode', () => {
     const el = createElement('motion.div', null, 'Hidden');
     const result = applyOverride(el, { hidden: true }, 'edit');
     expect(isValidElement(result)).toBe(true);
     if (isValidElement(result)) {
-      expect((result.props as { style?: { opacity?: string } }).style?.opacity).toBe('0.3');
+      expect((result.props as { style?: { display?: string } }).style?.display).toBe('none');
     }
   });
 

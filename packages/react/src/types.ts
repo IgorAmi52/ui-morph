@@ -1,4 +1,4 @@
-import type { ReactNode, Dispatch } from 'react';
+import type { ReactNode } from 'react';
 
 export interface ElementOverride {
   hidden?: boolean;
@@ -30,15 +30,27 @@ export type ConfigAction =
   | { type: 'RESET_CONFIG' }
   | { type: 'REORDER_CHILDREN'; payload: { parentPath: string; childOrder: string[] } };
 
+export interface DispatchOptions {
+  /** Skip undo history (initial load, save baseline, undo/redo). */
+  skipHistory?: boolean;
+}
+
 export interface MorphContextValue {
   config: MorphConfig;
-  dispatch: Dispatch<ConfigAction>;
+  dispatch: (action: ConfigAction, options?: DispatchOptions) => void;
   mode: MorphMode;
   editable: boolean;
   toggleMode: (() => void) | null;
   selectedPath: string | null;
   selectElement: (path: string | null) => void;
   saveConfig: () => Promise<boolean>;
+  discardChanges: () => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  beginHistoryTransaction: () => void;
+  commitHistoryTransaction: () => void;
   userId: string;
   viewId: string;
   apiUrl?: string;

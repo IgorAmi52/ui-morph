@@ -43,6 +43,11 @@ export function Morph({
 
   const exposedToggle = (!isControlled && editable) ? toggleMode : null;
 
+  const handleSave = useCallback((saved: MorphConfig) => {
+    setConfig(saved);
+    onSave?.(saved);
+  }, [onSave]);
+
   useEffect(() => {
     if (!usesRemoteConfig) {
       setConfig(EMPTY_CONFIG);
@@ -79,7 +84,7 @@ export function Morph({
       userId={userId}
       viewId={viewId}
       apiUrl={apiUrl}
-      onSave={onSave}
+      onSave={handleSave}
       onError={onError}
     >
       <MorphInner>{children}</MorphInner>

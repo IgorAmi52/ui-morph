@@ -377,9 +377,6 @@ export function AgentChat({
         onChange={setInput}
         onSubmit={() => void submitMessage(input)}
         disabled={composerLocked}
-        selectionLabel={
-          selectedPath ? selectionLabelFromPath(selectedPath) : undefined
-        }
         placeholder={
           pendingMessage ? 'Review pending changes first…' : 'Ask or describe a change…'
         }

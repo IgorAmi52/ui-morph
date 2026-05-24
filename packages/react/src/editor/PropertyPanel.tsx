@@ -102,15 +102,6 @@ function readSelectedElementState(path: string, panelWidth: number): SelectedEle
   };
 }
 
-function selectionLabel(path: string): string {
-  const el = document.querySelector<HTMLElement>(`[data-morph-path="${CSS.escape(path)}"]`);
-  const text = el?.textContent?.replace(/\s+/g, ' ').trim();
-  if (text && text.length > 0) {
-    return text.length > 36 ? `${text.slice(0, 35)}…` : text;
-  }
-  return 'Selected element';
-}
-
 interface PropertyPanelProps {
   onClose: () => void;
   suggestions: string[];
@@ -212,11 +203,7 @@ export function PropertyPanel({
           </div>
           <div>
             <h2 className="morph-editor-panel__title">Assistant</h2>
-            {selectedPath ? (
-              <p className="morph-editor-panel__subtitle">Editing · {selectionLabel(selectedPath)}</p>
-            ) : (
-              <p className="morph-editor-panel__subtitle">Layout & styling help</p>
-            )}
+            <p className="morph-editor-panel__subtitle">Layout & styling help</p>
           </div>
         </div>
         <button
