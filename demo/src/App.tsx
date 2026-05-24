@@ -3,6 +3,7 @@ import InsureLayout from './layouts/InsureLayout';
 import Dashboard from './pages/Dashboard';
 import Policies from './pages/Policies';
 import Claims from './pages/Claims';
+import LargeLoss from './pages/LargeLoss';
 import Customers from './pages/Customers';
 import Analytics from './pages/Analytics';
 import Agents from './pages/Agents';
@@ -18,6 +19,7 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="policies" element={<Policies />} />
           <Route path="claims" element={<Claims />} />
+          <Route path="large-loss" element={<LargeLoss />} />
           <Route path="customers" element={<Customers />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="agents" element={<Agents />} />

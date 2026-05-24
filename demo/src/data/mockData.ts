@@ -52,11 +52,72 @@ export interface Report {
   generated: string;
 }
 
+export interface LargeLossClaim {
+  id: string;
+  insured: string;
+  location: string;
+  lossType: string;
+  severity: 'Critical' | 'High' | 'Watch';
+  reserve: number;
+  exposure: number;
+  sla: string;
+  owner: string;
+  status: 'Coverage review' | 'Field investigation' | 'Settlement authority' | 'Litigation hold';
+  signal: string;
+}
+
+export interface LargeLossSignal {
+  label: string;
+  value: string;
+  tone: 'danger' | 'warning' | 'success' | 'info';
+  detail: string;
+}
+
+export interface WorkstreamCard {
+  stage: string;
+  owner: string;
+  count: number;
+  risk: string;
+  items: string[];
+}
+
+export interface LegacyConsoleWidget {
+  code: string;
+  label: string;
+  value: string;
+  meta: string;
+  tone: 'danger' | 'warning' | 'success' | 'info' | 'neutral';
+}
+
+export interface LegacyReserveLayer {
+  layer: string;
+  current: number;
+  requested: number;
+  authority: string;
+  variance: string;
+}
+
+export interface LegacyRuleDiagnostic {
+  id: string;
+  rule: string;
+  queue: string;
+  result: 'Hold' | 'Pass' | 'Review' | 'Failed';
+  owner: string;
+  lastRun: string;
+}
+
 export const dashboardStats = [
   { label: 'Active Policies', value: '12,847', change: '+4.2% vs last month', trend: 'up' as const },
   { label: 'Open Claims', value: '342', change: '-12% vs last month', trend: 'down' as const },
   { label: 'Monthly Premiums', value: '$2.4M', change: '+8.1% revenue', trend: 'up' as const },
   { label: 'Claims Ratio', value: '62.4%', change: '-2.3 pts improvement', trend: 'down' as const },
+];
+
+export const largeLossStats = [
+  { label: 'Open large-loss files', value: '47', change: '+9 opened after Midwest hail event', trend: 'up' as const },
+  { label: 'Gross exposure', value: '$18.4M', change: '$3.2M pending reserve review', trend: 'up' as const },
+  { label: 'SLA breaches', value: '7', change: '3 require manager approval today', trend: 'up' as const },
+  { label: 'Avg cycle time', value: '42d', change: '-6d vs Q1 complex claims', trend: 'down' as const },
 ];
 
 export const premiumTrend = [
@@ -91,6 +152,175 @@ export const claimsTrend = [
   { month: 'Apr', filed: 55, resolved: 58 },
   { month: 'May', filed: 58, resolved: 52 },
   { month: 'Jun', filed: 68, resolved: 61 },
+];
+
+export const largeLossClaims: LargeLossClaim[] = [
+  {
+    id: 'LLC-1048',
+    insured: 'Northstar Cold Storage',
+    location: 'Davenport, IA',
+    lossType: 'Warehouse fire',
+    severity: 'Critical',
+    reserve: 2450000,
+    exposure: 4100000,
+    sla: '2h to authority',
+    owner: 'M. Chen',
+    status: 'Settlement authority',
+    signal: 'BI rider disputed; counsel retained',
+  },
+  {
+    id: 'LLC-1052',
+    insured: 'Harborline Components',
+    location: 'Mobile, AL',
+    lossType: 'Flood interruption',
+    severity: 'Critical',
+    reserve: 1800000,
+    exposure: 2900000,
+    sla: 'Past due',
+    owner: 'A. Foster',
+    status: 'Coverage review',
+    signal: 'Named storm exclusion under review',
+  },
+  {
+    id: 'LLC-1039',
+    insured: 'Vista Peak Hotel Group',
+    location: 'Boulder, CO',
+    lossType: 'Roof collapse',
+    severity: 'High',
+    reserve: 920000,
+    exposure: 1600000,
+    sla: '6h to inspect',
+    owner: 'K. Walsh',
+    status: 'Field investigation',
+    signal: 'Engineer report missing',
+  },
+  {
+    id: 'LLC-1061',
+    insured: 'Metroline Transit Depot',
+    location: 'Newark, NJ',
+    lossType: 'Fleet hail loss',
+    severity: 'High',
+    reserve: 740000,
+    exposure: 1200000,
+    sla: '1d to reserve',
+    owner: 'L. Chen',
+    status: 'Field investigation',
+    signal: 'Vendor capacity constrained',
+  },
+  {
+    id: 'LLC-1027',
+    insured: 'Summit Medical Labs',
+    location: 'Phoenix, AZ',
+    lossType: 'Equipment contamination',
+    severity: 'Watch',
+    reserve: 410000,
+    exposure: 850000,
+    sla: '3d to review',
+    owner: 'R. Martinez',
+    status: 'Litigation hold',
+    signal: 'Subrogation opportunity',
+  },
+];
+
+export const largeLossSignals: LargeLossSignal[] = [
+  { label: 'Authority over threshold', value: '$3.2M', tone: 'danger', detail: 'Files above local branch approval limit' },
+  { label: 'Coverage disputes', value: '11', tone: 'warning', detail: 'Policy language review or counsel assigned' },
+  { label: 'Active field vendors', value: '26', tone: 'info', detail: 'Adjusters, engineers, restoration partners' },
+  { label: 'Subrogation prospects', value: '$680K', tone: 'success', detail: 'Recoverable exposure flagged by SIU' },
+];
+
+export const largeLossTimeline = [
+  { time: '08:10', title: 'CAT desk opened Midwest hail event', detail: 'Triage model raised 19 commercial auto and property files.' },
+  { time: '09:25', title: 'Northstar counsel letter received', detail: 'Business interruption rider and spoilage exclusion in dispute.' },
+  { time: '10:40', title: 'Field engineer assigned to Vista Peak', detail: 'Roof-load report expected before end of day.' },
+  { time: '11:15', title: 'Reserve committee slot requested', detail: 'Three files require authority above $1M.' },
+];
+
+export const largeLossCoverageQuestions = [
+  'Is spoilage excluded when fire suppression caused freezer outage?',
+  'Does named-storm flood exclusion apply to Harborline inland site?',
+  'Can fleet hail files be handled under aggregate appraisal?',
+  'Should Summit contamination be linked to third-party maintenance vendor?',
+];
+
+export const largeLossVendors = [
+  { name: 'Apex Forensics', role: 'Cause and origin', eta: 'Today 14:00', status: 'Confirmed' },
+  { name: 'BlueRiver Restoration', role: 'Water mitigation', eta: 'Capacity waitlist', status: 'At risk' },
+  { name: 'Keystone Engineering', role: 'Structural review', eta: 'Tomorrow 09:30', status: 'Confirmed' },
+  { name: 'Northpoint Counsel', role: 'Coverage opinion', eta: 'Draft due EOD', status: 'Escalated' },
+];
+
+export const largeLossWorkstreams: WorkstreamCard[] = [
+  {
+    stage: 'Triage',
+    owner: 'CAT desk',
+    count: 14,
+    risk: 'New event volume',
+    items: ['Validate loss address', 'Score severity', 'Attach policy snapshot'],
+  },
+  {
+    stage: 'Coverage',
+    owner: 'Coverage counsel',
+    count: 11,
+    risk: 'Policy language dispute',
+    items: ['Review endorsements', 'Draft reservation letter', 'Route to branch manager'],
+  },
+  {
+    stage: 'Field Investigation',
+    owner: 'Vendor ops',
+    count: 18,
+    risk: 'Vendor capacity',
+    items: ['Assign engineer', 'Schedule inspection', 'Upload photo packet'],
+  },
+  {
+    stage: 'Settlement Authority',
+    owner: 'Large loss committee',
+    count: 4,
+    risk: 'Reserve threshold',
+    items: ['Prepare authority memo', 'Check litigation hold', 'Approve reserve movement'],
+  },
+];
+
+export const legacyConsoleWidgets: LegacyConsoleWidget[] = [
+  { code: 'AUTH-OVR', label: 'Authority overrides', value: '14', meta: '6 over branch limit', tone: 'danger' },
+  { code: 'COV-HOLD', label: 'Coverage holds', value: '23', meta: '11 waiting counsel', tone: 'warning' },
+  { code: 'VND-SLA', label: 'Vendor SLA drift', value: '31%', meta: 'Mitigation partners overloaded', tone: 'warning' },
+  { code: 'RES-DELTA', label: 'Reserve delta', value: '$3.2M', meta: 'Pending committee review', tone: 'danger' },
+  { code: 'SIU-SUBRO', label: 'SIU / subro flags', value: '9', meta: '$680K recovery estimate', tone: 'success' },
+  { code: 'DOC-ERR', label: 'Document parse errors', value: '128', meta: 'OCR queue degraded', tone: 'neutral' },
+  { code: 'FNOL-LAG', label: 'FNOL lag', value: '18h', meta: 'Commercial property segment', tone: 'info' },
+  { code: 'LIT-HOLD', label: 'Litigation holds', value: '4', meta: '2 new this morning', tone: 'danger' },
+];
+
+export const legacyReserveLayers: LegacyReserveLayer[] = [
+  { layer: 'Building', current: 1250000, requested: 1750000, authority: 'Branch VP', variance: '+40%' },
+  { layer: 'Business interruption', current: 680000, requested: 1400000, authority: 'Committee', variance: '+106%' },
+  { layer: 'Contents / stock', current: 420000, requested: 610000, authority: 'Manager', variance: '+45%' },
+  { layer: 'Expense / extra cost', current: 100000, requested: 240000, authority: 'Committee', variance: '+140%' },
+];
+
+export const legacyRuleDiagnostics: LegacyRuleDiagnostic[] = [
+  { id: 'R-8841', rule: 'BI waiting period conflict', queue: 'Coverage', result: 'Hold', owner: 'Counsel ops', lastRun: '11:42:19' },
+  { id: 'R-4472', rule: 'Named storm exclusion', queue: 'Coverage', result: 'Review', owner: 'A. Foster', lastRun: '11:41:03' },
+  { id: 'R-2290', rule: 'Authority threshold breach', queue: 'Reserve', result: 'Failed', owner: 'M. Chen', lastRun: '11:39:55' },
+  { id: 'R-6102', rule: 'Duplicate vendor invoice', queue: 'Finance', result: 'Pass', owner: 'AP bot', lastRun: '11:35:08' },
+  { id: 'R-1017', rule: 'Subrogation candidate', queue: 'SIU', result: 'Review', owner: 'R. Martinez', lastRun: '11:30:44' },
+];
+
+export const legacyBatchJobs = [
+  { id: 'JOB-40991', name: 'CAT exposure refresh', status: 'Running', runtime: '00:18:22', records: '18,492' },
+  { id: 'JOB-40986', name: 'Document OCR extract', status: 'Degraded', runtime: '02:14:09', records: '61,204' },
+  { id: 'JOB-40980', name: 'Vendor SLA recompute', status: 'Queued', runtime: 'pending', records: '3,842' },
+  { id: 'JOB-40972', name: 'Reserve authority sync', status: 'Failed', runtime: '00:03:17', records: '47' },
+];
+
+export const legacyComplianceChecks = [
+  'Reservation of rights letter drafted for disputed BI files',
+  'Large-loss committee memo attached before reserve increase',
+  'Independent adjuster license valid in loss state',
+  'Litigation hold applied before counsel document exchange',
+  'OFAC and sanctions screen completed for vendors',
+  'Supervisor diary note entered after authority change',
 ];
 
 export const regionPerformance = [
