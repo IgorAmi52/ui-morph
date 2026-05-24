@@ -8,6 +8,7 @@ import { DragHandleLayer } from './DragHandleLayer';
 import { useMorphContext } from '../config/ConfigContext';
 import { EditorContainerProvider } from './EditorContainerContext';
 import { useLayoutSuggestions } from './useLayoutSuggestions';
+import { SharePreviewButton } from './SharePreviewButton';
 
 interface EditModeProviderProps {
   active: boolean;
@@ -233,6 +234,7 @@ export function EditModeProvider({ active, children }: EditModeProviderProps) {
                   </button>
                 </div>
                 <div className="morph-editor-toolbar__actions">
+                  <SharePreviewButton />
                   {toggleMode && (
                     <button
                       type="button"

@@ -19,6 +19,7 @@ export function Morph({
   userId,
   viewId: viewIdProp,
   apiUrl,
+  previewConfig,
   mode,
   editable = false,
   onSave,
@@ -27,10 +28,11 @@ export function Morph({
   children,
 }: MorphProps) {
   const viewId = resolveViewId(viewIdProp);
-  const usesRemoteConfig = Boolean(apiUrl);
-  const [config, setConfig] = useState<MorphConfig | null>(() => (
-    usesRemoteConfig ? null : EMPTY_CONFIG
-  ));
+  const usesRemoteConfig = Boolean(apiUrl) && previewConfig === undefined;
+  const [config, setConfig] = useState<MorphConfig | null>(() => {
+    if (previewConfig !== undefined) return previewConfig;
+    return usesRemoteConfig ? null : EMPTY_CONFIG;
+  });
   const [internalMode, setInternalMode] = useState<MorphMode>('view');
   const adapterRef = useRef(createAdapter(apiUrl));
 
@@ -49,6 +51,11 @@ export function Morph({
   }, [onSave]);
 
   useEffect(() => {
+    if (previewConfig !== undefined) {
+      setConfig(previewConfig);
+      return;
+    }
+
     if (!usesRemoteConfig) {
       setConfig(EMPTY_CONFIG);
       return;
@@ -70,7 +77,7 @@ export function Morph({
       });
 
     return () => { cancelled = true; };
-  }, [usesRemoteConfig, userId, viewId, onError]);
+  }, [previewConfig, usesRemoteConfig, userId, viewId, onError]);
 
   if (config === null && fallback) return <>{fallback}</>;
 

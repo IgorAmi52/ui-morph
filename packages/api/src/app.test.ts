@@ -118,6 +118,32 @@ describe('HTTP API', () => {
     });
   });
 
+  describe('POST /share', () => {
+    it('creates a share link with url and token', async () => {
+      const overrides = { 'morph.div:0': { text: 'Shared layout' } };
+      const res = await request(app).post('/share').send({ userId: 'demo-user', viewId: 'index', overrides, origin: 'http://localhost:5173' }).expect(201);
+      expect(res.body.token).toMatch(/^[a-f0-9]+$/);
+      expect(res.body.url).toBe(`http://localhost:5173/preview?token=${res.body.token}`);
+      expect(res.body.expiresAt).toBeTruthy();
+    });
+    it('rejects requests without overrides', async () => {
+      const res = await request(app).post('/share').send({ userId: 'demo-user', viewId: 'index' }).expect(400);
+      expect(res.body.error).toMatch(/overrides/);
+    });
+  });
+  describe('GET /share/:token', () => {
+    it('returns stored config for a valid token', async () => {
+      const overrides = { 'morph.div:0.h1:0': { style: { color: 'blue' } } };
+      const created = await request(app).post('/share').send({ userId: 'demo-user', viewId: 'dashboard', overrides }).expect(201);
+      const res = await request(app).get(`/share/${created.body.token}`).expect(200);
+      expect(res.body).toEqual({ userId: 'demo-user', viewId: 'dashboard', config: overrides });
+    });
+    it('returns 404 for unknown tokens', async () => {
+      const res = await request(app).get('/share/does-not-exist').expect(404);
+      expect(res.body.error).toMatch(/not found/);
+    });
+  });
+
   describe('POST /override', () => {
     it('applies a manual override and returns full config', async () => {
       await request(app)

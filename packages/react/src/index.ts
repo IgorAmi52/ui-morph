@@ -14,3 +14,9 @@ export type {
   ConfigChangeSummary,
 } from './types';
 export { serializeLayoutSnapshot } from './agent/serializeLayoutSnapshot';
+export { createShareLink, fetchShareByToken } from './config/shareClient';
+export type {
+  CreateShareLinkRequest,
+  CreateShareLinkResponse,
+  ShareByTokenResponse,
+} from './config/shareClient';

@@ -9,11 +9,13 @@ import Agents from './pages/Agents';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Support from './pages/Support';
+import PreviewPage from './pages/PreviewPage';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/preview" element={<PreviewPage />} />
         <Route element={<InsureLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="policies" element={<Policies />} />

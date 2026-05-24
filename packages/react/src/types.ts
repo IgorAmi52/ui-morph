@@ -15,6 +15,8 @@ export interface MorphProps {
   userId: string;
   viewId?: string;
   apiUrl?: string;
+  /** When set, skips remote config load and applies this config read-only. */
+  previewConfig?: MorphConfig;
   mode?: MorphMode;
   editable?: boolean;
   onSave?: (config: MorphConfig) => void;
