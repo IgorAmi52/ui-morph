@@ -1,15 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ReactNode, RefObject } from 'react';
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragStartEvent,
-  type DragEndEvent,
-  type DragMoveEvent,
-} from '@dnd-kit/core';
 import { useMorphContext } from '../config/ConfigContext';
 import { getParentPath, getSegment } from '../tree/domDecorator';
 import { DropIndicator } from './DropIndicator';
@@ -25,12 +15,30 @@ interface DragState {
   parentPath: string;
   siblingPaths: string[];
   snapshot: string;
+  width: number;
+  height: number;
+  offsetX: number;
+  offsetY: number;
 }
 
 interface DropTarget {
   rect: DOMRect;
   position: 'before' | 'after';
+  axis: 'x' | 'y';
 }
+
+interface DragCandidate {
+  path: string;
+  startX: number;
+  startY: number;
+}
+
+interface OverlayPosition {
+  x: number;
+  y: number;
+}
+
+const DRAG_ACTIVATION_DISTANCE = 6;
 
 function getSiblingPaths(container: HTMLElement, parentPath: string): string[] {
   const paths: string[] = [];
@@ -46,33 +54,62 @@ function computeDropTarget(
   container: HTMLElement,
   siblingPaths: string[],
   activePath: string,
+  pointerX: number,
   pointerY: number,
 ): { index: number; target: DropTarget } | null {
   const rects: { path: string; rect: DOMRect }[] = [];
   for (const p of siblingPaths) {
+    if (p === activePath) continue;
+
     const el = container.querySelector<HTMLElement>(
       `[data-morph-path="${CSS.escape(p)}"]`,
     );
     if (el) rects.push({ path: p, rect: el.getBoundingClientRect() });
   }
 
-  if (rects.length < 2) return null;
+  if (rects.length === 0) return null;
 
+  let closestIndex = 0;
+  let closestDistance = Infinity;
   for (let i = 0; i < rects.length; i++) {
-    const midY = rects[i].rect.top + rects[i].rect.height / 2;
-    if (pointerY < midY && rects[i].path !== activePath) {
-      return { index: i, target: { rect: rects[i].rect, position: 'before' } };
+    const rect = rects[i].rect;
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const distance = Math.hypot(pointerX - centerX, pointerY - centerY);
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestIndex = i;
     }
   }
 
-  const last = rects[rects.length - 1];
-  if (last.path !== activePath) {
-    return {
-      index: rects.length,
-      target: { rect: last.rect, position: 'after' },
-    };
-  }
-  return null;
+  const closest = rects[closestIndex];
+  const overlapsRow = rects.some(({ rect }, index) => (
+    index !== closestIndex &&
+    rect.top < closest.rect.bottom &&
+    rect.bottom > closest.rect.top
+  ));
+  const axis = overlapsRow ? 'x' : 'y';
+  const midpoint = axis === 'x'
+    ? closest.rect.left + closest.rect.width / 2
+    : closest.rect.top + closest.rect.height / 2;
+  const pointerPosition = axis === 'x' ? pointerX : pointerY;
+  const position: DropTarget['position'] = pointerPosition < midpoint ? 'before' : 'after';
+  const closestSiblingIndex = siblingPaths.indexOf(closest.path);
+  const index = closestSiblingIndex + (position === 'after' ? 1 : 0);
+
+  return { index, target: { rect: closest.rect, position, axis } };
+}
+
+function getPointerDragPath(target: EventTarget | null): string | null {
+  if (!(target instanceof Element)) return null;
+
+  const handle = target.closest<HTMLElement>('[data-morph-drag-handle]');
+  if (handle) return handle.getAttribute('data-morph-drag-handle');
+
+  if (target.closest('[data-morph-editor]')) return null;
+
+  const morphEl = target.closest<HTMLElement>('[data-morph-path]');
+  return morphEl?.getAttribute('data-morph-path') ?? null;
 }
 
 export function DndSortManager({
@@ -83,114 +120,204 @@ export function DndSortManager({
   const { dispatch } = useMorphContext();
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
+  const [overlayPosition, setOverlayPosition] = useState<OverlayPosition | null>(null);
+  const candidateRef = useRef<DragCandidate | null>(null);
+  const dragStateRef = useRef<DragState | null>(null);
   const dropIndexRef = useRef<number | null>(null);
-  const pointerYRef = useRef(0);
 
-  useEffect(() => {
-    const onPointerMove = (e: PointerEvent) => { pointerYRef.current = e.clientY; };
-    window.addEventListener('pointermove', onPointerMove);
-    return () => window.removeEventListener('pointermove', onPointerMove);
-  }, []);
+  const resetDrag = useCallback(() => {
+    candidateRef.current = null;
+    dragStateRef.current = null;
+    dropIndexRef.current = null;
+    setDragState(null);
+    setDropTarget(null);
+    setOverlayPosition(null);
+    onDragActiveChange(false);
+  }, [onDragActiveChange]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-  );
-
-  const handleDragStart = useCallback(
-    (event: DragStartEvent) => {
-      const path = String(event.active.id);
+  const beginDrag = useCallback(
+    (path: string, event: PointerEvent): DragState | null => {
       const parent = getParentPath(path);
-      if (!parent || !containerRef.current) return;
+      if (!parent || !containerRef.current) return null;
 
       const siblings = getSiblingPaths(containerRef.current, parent);
-      if (siblings.length < 2) return;
+      if (siblings.length < 2) return null;
 
       const el = containerRef.current.querySelector<HTMLElement>(
         `[data-morph-path="${CSS.escape(path)}"]`,
       );
-      const snapshot = el ? el.outerHTML : '';
+      if (!el) return null;
 
-      setDragState({ activePath: path, parentPath: parent, siblingPaths: siblings, snapshot });
+      const rect = el.getBoundingClientRect();
+      const snapshot = el.outerHTML;
+      const next: DragState = {
+        activePath: path,
+        parentPath: parent,
+        siblingPaths: siblings,
+        snapshot,
+        width: rect.width,
+        height: rect.height,
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top,
+      };
+
+      dragStateRef.current = next;
+      setDragState(next);
+      setOverlayPosition({ x: event.clientX - next.offsetX, y: event.clientY - next.offsetY });
       onDragActiveChange(true);
+      return next;
     },
     [containerRef, onDragActiveChange],
   );
 
-  const handleDragMove = useCallback(
-    (_event: DragMoveEvent) => {
-      if (!dragState || !containerRef.current) return;
-      const pointerY = pointerYRef.current;
+  const updateDropTarget = useCallback((event: PointerEvent, state: DragState) => {
+    if (!containerRef.current) return;
 
-      const result = computeDropTarget(
-        containerRef.current,
-        dragState.siblingPaths,
-        dragState.activePath,
-        pointerY,
-      );
+    const result = computeDropTarget(
+      containerRef.current,
+      state.siblingPaths,
+      state.activePath,
+      event.clientX,
+      event.clientY,
+    );
 
-      if (result) {
-        dropIndexRef.current = result.index;
-        setDropTarget(result.target);
-      } else {
-        dropIndexRef.current = null;
-        setDropTarget(null);
-      }
-    },
-    [dragState, containerRef],
-  );
-
-  const handleDragEnd = useCallback(
-    (_event: DragEndEvent) => {
-      if (dragState && dropIndexRef.current !== null) {
-        const { parentPath, siblingPaths, activePath } = dragState;
-        const currentIndex = siblingPaths.indexOf(activePath);
-        let targetIndex = dropIndexRef.current;
-
-        if (currentIndex !== -1 && currentIndex !== targetIndex && currentIndex !== targetIndex - 1) {
-          const reordered = [...siblingPaths];
-          reordered.splice(currentIndex, 1);
-          const insertAt = targetIndex > currentIndex ? targetIndex - 1 : targetIndex;
-          reordered.splice(insertAt, 0, activePath);
-
-          const childOrder = reordered.map((p) => getSegment(p));
-          dispatch({ type: 'REORDER_CHILDREN', payload: { parentPath, childOrder } });
-        }
-      }
-
-      setDragState(null);
-      setDropTarget(null);
+    if (result) {
+      dropIndexRef.current = result.index;
+      setDropTarget(result.target);
+    } else {
       dropIndexRef.current = null;
-      onDragActiveChange(false);
-    },
-    [dragState, dispatch, onDragActiveChange],
-  );
+      setDropTarget(null);
+    }
+  }, [containerRef]);
 
-  const handleDragCancel = useCallback(() => {
-    setDragState(null);
-    setDropTarget(null);
-    dropIndexRef.current = null;
-    onDragActiveChange(false);
-  }, [onDragActiveChange]);
+  const finishDrag = useCallback(() => {
+    const state = dragStateRef.current;
+    if (state && dropIndexRef.current !== null) {
+      const { parentPath, siblingPaths, activePath } = state;
+      const currentIndex = siblingPaths.indexOf(activePath);
+      const targetIndex = dropIndexRef.current;
+
+      if (currentIndex !== -1 && currentIndex !== targetIndex && currentIndex !== targetIndex - 1) {
+        const reordered = [...siblingPaths];
+        reordered.splice(currentIndex, 1);
+        const insertAt = targetIndex > currentIndex ? targetIndex - 1 : targetIndex;
+        reordered.splice(insertAt, 0, activePath);
+
+        const childOrder = reordered.map((p) => getSegment(p));
+        dispatch({ type: 'REORDER_CHILDREN', payload: { parentPath, childOrder } });
+      }
+    }
+
+    resetDrag();
+  }, [dispatch, resetDrag]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const removeWindowListeners = () => {
+      window.removeEventListener('pointermove', handlePointerMove, true);
+      window.removeEventListener('pointerup', handlePointerUp, true);
+      window.removeEventListener('pointercancel', handlePointerCancel, true);
+    };
+
+    const addWindowListeners = () => {
+      window.addEventListener('pointermove', handlePointerMove, true);
+      window.addEventListener('pointerup', handlePointerUp, true);
+      window.addEventListener('pointercancel', handlePointerCancel, true);
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!event.isPrimary || event.button !== 0) return;
+
+      const path = getPointerDragPath(event.target);
+      if (!path) return;
+
+      candidateRef.current = { path, startX: event.clientX, startY: event.clientY };
+      addWindowListeners();
+
+      if ((event.target as Element | null)?.closest?.('[data-morph-drag-handle]')) {
+        event.preventDefault();
+      }
+      event.stopPropagation();
+    };
+
+    function handlePointerMove(event: PointerEvent) {
+      const active = dragStateRef.current;
+      if (active) {
+        event.preventDefault();
+        event.stopPropagation();
+        setOverlayPosition({
+          x: event.clientX - active.offsetX,
+          y: event.clientY - active.offsetY,
+        });
+        updateDropTarget(event, active);
+        return;
+      }
+
+      const candidate = candidateRef.current;
+      if (!candidate) return;
+
+      const distance = Math.hypot(
+        event.clientX - candidate.startX,
+        event.clientY - candidate.startY,
+      );
+      if (distance < DRAG_ACTIVATION_DISTANCE) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const next = beginDrag(candidate.path, event);
+      if (next) {
+        updateDropTarget(event, next);
+      } else {
+        candidateRef.current = null;
+        removeWindowListeners();
+      }
+    }
+
+    function handlePointerUp(event: PointerEvent) {
+      if (dragStateRef.current) {
+        event.preventDefault();
+        event.stopPropagation();
+        finishDrag();
+      } else {
+        candidateRef.current = null;
+      }
+      removeWindowListeners();
+    }
+
+    function handlePointerCancel() {
+      resetDrag();
+      removeWindowListeners();
+    }
+
+    container.addEventListener('pointerdown', handlePointerDown, true);
+
+    return () => {
+      container.removeEventListener('pointerdown', handlePointerDown, true);
+      removeWindowListeners();
+    };
+  }, [beginDrag, containerRef, finishDrag, resetDrag, updateDropTarget]);
 
   return (
-    <DndContext
-      sensors={sensors}
-      onDragStart={handleDragStart}
-      onDragMove={handleDragMove}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
+    <>
       {children}
       <DropIndicator target={dropTarget} />
-      <DragOverlay dropAnimation={null}>
-        {dragState && (
-          <div
-            data-morph-editor
-            className="morph-editor-drag-overlay"
-            dangerouslySetInnerHTML={{ __html: dragState.snapshot }}
-          />
-        )}
-      </DragOverlay>
-    </DndContext>
+      {dragState && overlayPosition && (
+        <div
+          data-morph-editor
+          className="morph-editor-drag-overlay"
+          style={{
+            position: 'fixed',
+            top: overlayPosition.y,
+            left: overlayPosition.x,
+            width: dragState.width,
+            minHeight: dragState.height,
+          }}
+          dangerouslySetInnerHTML={{ __html: dragState.snapshot }}
+        />
+      )}
+    </>
   );
 }

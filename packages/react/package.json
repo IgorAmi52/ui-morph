@@ -34,8 +34,5 @@
     "react-dom": "^19.2.6",
     "typescript": "~6.0.2",
     "vite": "^8.0.12"
-  },
-  "dependencies": {
-    "@dnd-kit/core": "^6.3.1"
   }
 }

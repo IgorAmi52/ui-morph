@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { RefObject } from 'react';
-import { useDraggable } from '@dnd-kit/core';
 
 interface HandlePosition {
   path: string;
@@ -33,6 +32,7 @@ export function DragHandleLayer({ containerRef }: DragHandleLayerProps) {
       const els = containerRef.current.querySelectorAll<HTMLElement>('[data-morph-path]');
       const next: HandlePosition[] = [];
       for (const el of els) {
+        if (el.closest('[data-morph-editor]')) continue;
         const path = el.getAttribute('data-morph-path');
         if (!path) continue;
         const rect = el.getBoundingClientRect();
@@ -83,22 +83,19 @@ interface DragHandleProps {
 }
 
 function DragHandle({ path, top, left, height }: DragHandleProps) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: path });
-
-  if (isDragging) return null;
-
   return (
     <div
-      ref={setNodeRef}
       data-morph-editor
+      data-morph-drag-handle={path}
       className="morph-editor-drag-handle"
+      role="button"
+      tabIndex={0}
+      aria-label="Move element"
       style={{
         position: 'fixed',
         top: top + height / 2 - 10,
         left: left - 24,
       }}
-      {...listeners}
-      {...attributes}
       dangerouslySetInnerHTML={{ __html: GRIP_SVG }}
     />
   );

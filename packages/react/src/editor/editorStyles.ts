@@ -295,6 +295,7 @@ const EDITOR_STYLES = `
 [data-morph-path] {
   cursor: pointer;
   transition: outline 0.1s;
+  touch-action: none;
 }
 
 [data-morph-path]:hover {
@@ -337,6 +338,8 @@ const EDITOR_STYLES = `
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: background 0.15s, box-shadow 0.15s, border-color 0.15s;
   pointer-events: auto;
+  touch-action: none;
+  user-select: none;
 }
 
 .morph-editor-drag-handle:hover {
@@ -360,7 +363,6 @@ const EDITOR_STYLES = `
 }
 
 .morph-editor-drop-indicator {
-  height: 2px;
   background: #0891b2;
   z-index: 10001;
   pointer-events: none;
@@ -387,15 +389,37 @@ const EDITOR_STYLES = `
   right: -4px;
 }
 
+.morph-editor-drop-indicator--x::before,
+.morph-editor-drop-indicator--x::after {
+  left: -3px;
+  right: auto;
+}
+
+.morph-editor-drop-indicator--x::before {
+  top: -4px;
+}
+
+.morph-editor-drop-indicator--x::after {
+  top: auto;
+  bottom: -4px;
+}
+
 .morph-editor-drag-overlay {
   opacity: 0.7;
   pointer-events: none;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   border-radius: 4px;
+  z-index: 10004;
+  overflow: hidden;
 }
 
 .morph-editor-dragging [data-morph-path]:hover {
   outline: none;
+}
+
+.morph-editor-dragging [data-morph-path] {
+  cursor: grabbing;
+  user-select: none;
 }
 `;
 

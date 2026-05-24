@@ -15,11 +15,12 @@ This is an **MVP** — single SaaS instance, per-user configs. No multi-tenant A
 | Decision | Choice |
 |---|---|
 | Element discovery | `React.Children` + `cloneElement` tree walking (no Fiber internals) |
-| Scope | Phase 1: hide/show, text edit, style overrides, persistence. DnD deferred. |
+| Scope | Phase 1: hide/show, text edit, style overrides, drag/move sibling reordering, persistence. |
 | Backend | Simple Express REST API with PostgreSQL |
 | Build | Vite library mode + TypeScript, pnpm monorepo |
 | Change flow | All changes (manual + AI) go through backend for validation before persisting |
 | Auth | MVP: per-user scoping via `userId` prop. No API key infrastructure yet. |
+| Drag/move | Native pointer-event drag manager over decorated DOM nodes; no DnD dependency. |
 
 ---
 
@@ -51,6 +52,9 @@ ui-morph/
 │   │       │   └── apiClient.ts
 │   │       └── editor/
 │   │           ├── EditModeProvider.tsx
+│   │           ├── DndSortManager.tsx
+│   │           ├── DragHandleLayer.tsx
+│   │           ├── DropIndicator.tsx
 │   │           ├── SelectionOverlay.tsx
 │   │           ├── PropertyPanel.tsx
 │   │           └── controls/
@@ -144,11 +148,12 @@ Example paths: `morph.div:0.h1:0`, `morph.k:sidebar.ul:0.li:2`, `morph.header.na
 {
   "morph.div:0.h1:0": { "style": { "color": "red", "fontSize": "18px" } },
   "morph.div:1": { "hidden": true },
-  "morph.div:0.p:0": { "text": "Updated welcome message" }
+  "morph.div:0.p:0": { "text": "Updated welcome message" },
+  "morph.div:0": { "childOrder": ["section:1", "section:0", "section:2"] }
 }
 ```
 
-Type: `Record<string, ElementOverride>` where `ElementOverride = { hidden?, text?, style? }`
+Type: `Record<string, ElementOverride>` where `ElementOverride = { hidden?, text?, style?, childOrder? }`
 
 ### 5. Change Flow — All Changes Through Backend
 
@@ -177,8 +182,16 @@ Click element → **PropertyPanel** appears with two tabs:
 1. **Manual controls**: visibility toggle, text editor, color picker, size control
 2. **AI prompt**: text input where user describes what they want ("make this text larger and blue")
 
+**Drag/move flow**:
+Pointer-drag a decorated element, or its generated grip handle → **DndSortManager** starts a drag after a small movement threshold → **DropIndicator** shows before/after insertion → releasing the pointer dispatches `REORDER_CHILDREN` with the parent path and new `childOrder`.
+
+Drag is limited to reordering siblings under the same parent. The drop calculation supports vertical stacks and horizontal/grid rows by comparing pointer position against sibling bounding boxes. Editor UI marked with `data-morph-editor` is excluded from drag start.
+
 **UI components**:
 - **SelectionOverlay** — Blue outline around selected element (positioned via `getBoundingClientRect`)
+- **DragHandleLayer** — Fixed-position grip handles aligned beside decorated elements
+- **DndSortManager** — Native pointer-event drag manager that reorders sibling paths
+- **DropIndicator** — Before/after insertion marker for vertical and horizontal layouts
 - **PropertyPanel** — Right sidebar (~300px):
   - Element path display (debug info)
   - Tab 1 — Manual: visibility toggle, text editor, color picker, size control, reset buttons
@@ -260,11 +273,15 @@ Must work on React 17, 18, and 19. Constraints:
 ### Step 6 — Edit Mode UI (largest effort)
 - `EditModeProvider.tsx` — overlay shell, event suppression
 - `SelectionOverlay.tsx` — positioned highlight
+- `DndSortManager.tsx` — pointer-event drag/move manager
+- `DragHandleLayer.tsx` — generated grip handles for decorated elements
+- `DropIndicator.tsx` — before/after drop marker
 - `PropertyPanel.tsx` with tabbed layout (Manual / AI Prompt)
 - Manual controls: TextEditor, ColorPicker, SizeControl, VisibilityToggle
 - `AiPromptInput.tsx` — textarea + submit (sends to `POST /override` with `type: "ai_prompt"`)
 - Wire into walkTree (MorphEditable wrapper in edit mode)
 - Each edit → POST /override → update local config on success
+- Drag sibling → dispatch `REORDER_CHILDREN` → persist `childOrder`
 - Full flow test: edit → validate → persist → reload → verify
 
 ### Step 7 — Demo + Polish
@@ -281,4 +298,5 @@ Must work on React 17, 18, and 19. Constraints:
 2. **Backend tests**: POST /override validates and rejects bad CSS/XSS text; GET returns correct scoped config
 3. **Integration test**: Demo app → edit mode → click element → change color → backend validates → reload → color persists
 4. **AI prompt flow**: Click element → AI tab → type prompt → POST /override with type ai_prompt → backend receives it (AI processing is out of scope, but the plumbing works)
-5. **Edge cases**: Conditional rendering doesn't break sibling paths; deeply nested trees; fragments
+5. **Drag/move flow**: Demo app → edit mode → drag an element or grip handle → drop before/after a sibling → `childOrder` updates → save/reload preserves order
+6. **Edge cases**: Conditional rendering doesn't break sibling paths; deeply nested trees; fragments; vertical lists; horizontal/grid sibling layouts
