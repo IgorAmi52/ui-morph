@@ -37,7 +37,7 @@ export function SizeControl({ fontSize, isOverridden, onChange, onClear }: SizeC
           style={{ width: 80 }}
           aria-label="Font size in pixels"
         />
-        <span style={{ fontSize: 13, color: '#64748b' }}>px</span>
+        <span className="morph-editor-control__unit">px</span>
         {isOverridden && (
           <button type="button" className="morph-editor-panel__close" onClick={onClear} title="Clear">
             x

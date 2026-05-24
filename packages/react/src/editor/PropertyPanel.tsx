@@ -5,8 +5,14 @@ import type { ElementOverride } from '../types';
 import { VisibilityToggle } from './controls/VisibilityToggle';
 import { ColorPicker } from './controls/ColorPicker';
 import { SizeControl } from './controls/SizeControl';
+import { GridSpanControl } from './controls/GridSpanControl';
 import { AgentChat } from './controls/AgentChat';
 import { useResizablePanel } from './useResizablePanel';
+import {
+  formatGridColumnSpan,
+  getGridItemResizeContext,
+  type GridItemResizeContext,
+} from './gridItemResize';
 import {
   getDisabledCapabilities,
   isCapabilityEnabled,
@@ -25,6 +31,7 @@ interface Defaults {
 interface SelectedElementState {
   defaults: Defaults;
   disabledCapabilities: Set<MorphCapability>;
+  gridItem: GridItemResizeContext | null;
   panelSide: PanelSide;
 }
 
@@ -36,6 +43,7 @@ const EMPTY_DEFAULTS: Defaults = {
 const EMPTY_STATE: SelectedElementState = {
   defaults: EMPTY_DEFAULTS,
   disabledCapabilities: new Set(),
+  gridItem: null,
   panelSide: 'right',
 };
 
@@ -98,6 +106,7 @@ function readSelectedElementState(path: string, panelWidth: number): SelectedEle
       fontSize: computed.fontSize,
     },
     disabledCapabilities: getDisabledCapabilities(el),
+    gridItem: getGridItemResizeContext(el),
     panelSide: resolvePanelSide(el, panelWidth),
   };
 }
@@ -120,6 +129,7 @@ export function PropertyPanel({
 
   const override = selectedPath ? config[selectedPath] ?? {} : {};
   const { defaults, disabledCapabilities, panelSide } = elementState;
+  const gridItem = elementState.gridItem;
   const canChangeVisibility = isCapabilityEnabled(disabledCapabilities, 'visibility');
   const canChangeTextColor = isCapabilityEnabled(disabledCapabilities, 'textColor');
   const canChangeBackground = isCapabilityEnabled(disabledCapabilities, 'background');
@@ -148,7 +158,7 @@ export function PropertyPanel({
       window.removeEventListener('resize', updateSelectedElementState);
       window.removeEventListener('scroll', updateSelectedElementState, true);
     };
-  }, [selectedPath, width]);
+  }, [config, selectedPath, width]);
 
   const updateOverride = useCallback(
     (changes: Partial<ElementOverride>) => {
@@ -284,6 +294,15 @@ export function PropertyPanel({
                 isOverridden={override.style?.fontSize !== undefined}
                 onChange={(fs) => updateStyle('fontSize', fs)}
                 onClear={() => clearStyleProp('fontSize')}
+              />
+            )}
+            {canResize && gridItem && (
+              <GridSpanControl
+                columnSpan={gridItem.columnSpan}
+                maxColumnSpan={gridItem.maxColumnSpan}
+                isOverridden={override.style?.gridColumn !== undefined}
+                onChange={(span) => updateStyle('gridColumn', formatGridColumnSpan(span))}
+                onClear={() => clearStyleProp('gridColumn')}
               />
             )}
             {hasManualControls && (

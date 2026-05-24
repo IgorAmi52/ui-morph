@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { scoreScenarioRun } from '../../../../../tools/agent-eval/scoreScenario.js';
-import type { AgentScenario, ScenarioRunResult } from '../../../../../tools/agent-eval/types.js';
+import { scoreScenarioRun } from '../../../../tools/agent-eval/scoreScenario.js';
+import type { AgentScenario, ScenarioRunResult } from '../../../../tools/agent-eval/types.js';
 
 const baseScenario: AgentScenario = {
   id: 'test-hide',

@@ -9,7 +9,11 @@ import {
   serializeLiveHistory,
 } from '../../agent/chatPersistence';
 import { serializeLayoutSnapshot } from '../../agent/serializeLayoutSnapshot';
-import { extractSelectionSubtree, selectionLabelFromPath } from '../../agent/selectionContext';
+import {
+  deriveAgentEditScope,
+  extractSelectionSubtree,
+  selectionLabelFromPath,
+} from '../../agent/selectionContext';
 import { useEditorContainer } from '../EditorContainerContext';
 import { clearChangeHighlights, setChangeHighlights } from '../changeHighlights';
 import { ChatMessage } from './ChatMessage';
@@ -19,6 +23,21 @@ import { TypingIndicator } from './TypingIndicator';
 
 function newProposalId(): string {
   return `proposal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+const LEGACY_CONSOLE_DEMO_PROMPT =
+  'Transform this legacy console: hide the alert strip, tab row, active constraints, raw payload, and low-priority side panels; make the metric numbers and panel titles larger; give the reserve and workload panels a soft blue background; make the reserve dashboard wider and the remaining layout cleaner.';
+
+function legacyConsoleSuggestions(selectedPath: string | null, suggestions: string[]): string[] {
+  if (!selectedPath?.includes('id:legacy-claims-console') &&
+    !selectedPath?.includes('id:legacy-reorderable-module-board')) {
+    return suggestions;
+  }
+
+  return [
+    LEGACY_CONSOLE_DEMO_PROMPT,
+    ...suggestions.filter((suggestion) => suggestion !== LEGACY_CONSOLE_DEMO_PROMPT),
+  ].slice(0, 3);
 }
 
 export function AgentChat({
@@ -56,6 +75,7 @@ export function AgentChat({
   const pendingMessage =
     pendingProposalIndex >= 0 ? history[pendingProposalIndex] : null;
   const composerLocked = loading || approvalBusy || pendingProposalIndex >= 0;
+  const starterSuggestions = legacyConsoleSuggestions(selectedPath, suggestions);
 
   useEffect(() => {
     if (!apiUrl) return;
@@ -263,6 +283,7 @@ export function AgentChat({
             : undefined;
         const selectionLabel =
           selectedPath != null ? selectionLabelFromPath(selectedPath) : undefined;
+        const editScope = deriveAgentEditScope(snapshot, selectionSubtree);
 
         await runAgentRequest(
           {
@@ -272,6 +293,7 @@ export function AgentChat({
             selectedPath: selectedPath ?? undefined,
             selectionLabel,
             selectionSubtree,
+            editScope,
             snapshot,
             config: configBeforeRequest,
             history: nextHistory.slice(-20),
@@ -318,7 +340,7 @@ export function AgentChat({
       <div className="morph-editor-agent-chat__messages">
         {history.length === 0 && !loading && (
           <ChatEmptyState
-            suggestions={suggestions}
+            suggestions={starterSuggestions}
             refreshing={suggestionsRefreshing}
             disabled={composerLocked}
             onSuggestion={(s) => void submitMessage(s)}

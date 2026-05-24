@@ -7,7 +7,7 @@ React library (`@ui-morph/react`) that wraps a SaaS app's UI so end users can cu
 ```
 ui-morph/
 ├── packages/react/     @ui-morph/react — library (publish target)
-├── packages/api/       @ui-morph/api — Express + Postgres + layout agent (Gemini)
+├── api/                @ui-morph/api — Express + Postgres + layout agent (Gemini)
 ├── demo/               Insurance-themed dev app (consumes workspace package)
 ├── docs/PLAN.md        Original MVP plan — see "Plan vs code" below
 ├── pnpm-workspace.yaml
@@ -21,6 +21,7 @@ ui-morph/
 | `pnpm install` | Install workspace deps |
 | `pnpm db:up` | Start Postgres (Docker) |
 | `pnpm db:migrate` | Run API migrations |
+| `pnpm dev:all` / `make dev` | Start Postgres, migrate, then run library + API + demo |
 | `pnpm dev` | Watch-build `@ui-morph/react` |
 | `pnpm dev:api` | Run API on `:3001` |
 | `pnpm dev:demo` | Run demo at Vite dev server |
@@ -30,9 +31,9 @@ ui-morph/
 | `pnpm eval:agent:score` | Same eval, JSON stdout (for GEPA / CI) |
 | `pnpm gepa:optimize` | GEPA prompt optimization (`tools/gepa-opt`, see README there) |
 
-Set `GEMINI_API_KEY` in `packages/api/.env` for the layout agent and eval/GEPA runs.
+Set `GEMINI_API_KEY` in `api/.env` for the layout agent and eval/GEPA runs.
 
-**Prompt optimization:** Static instructions live in `packages/api/src/agent/layoutInstructions.ts` (`LAYOUT_AGENT_INSTRUCTIONS_VERSION`). Golden scenarios in `tools/agent-eval/scenarios/` (includes harder cases: `swap-by-name`, `reorder-four-sections`, `pick-subtitle`, etc.). Run train eval; if below 100%, run `pnpm gepa:optimize` once and validate on val before merging. See `tools/gepa-opt/README.md`.
+**Prompt optimization:** Static instructions live in `api/src/agent/layoutInstructions.ts` (`LAYOUT_AGENT_INSTRUCTIONS_VERSION`). Golden scenarios in `tools/agent-eval/scenarios/` (includes harder cases: `swap-by-name`, `reorder-four-sections`, `pick-subtitle`, etc.). Run train eval; if below 100%, run `pnpm gepa:optimize` once and validate on val before merging. See `tools/gepa-opt/README.md`.
 
 Node ≥18, pnpm ≥9.
 
@@ -60,7 +61,7 @@ Node ≥18, pnpm ≥9.
 | `remove_element_override` | `REMOVE_OVERRIDE` |
 | `reorder_children` | `REORDER_CHILDREN` (`childOrder` = **segments**, not full paths) |
 
-Shared types: `LayoutSnapshot`, `LayoutNode` in `packages/react/src/types.ts` (mirrored in `packages/api/src/types.ts`).
+Shared types: `LayoutSnapshot`, `LayoutNode` in `packages/react/src/types.ts` (mirrored in `api/src/types.ts`).
 
 ## Plan vs code
 

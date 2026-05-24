@@ -4,6 +4,17 @@
 
 `@ui-morph/react` is a React wrapper component library for SaaS products. Host apps wrap a page or region with `<Morph>`, and end users can visually customize that UI in edit mode.
 
+Current repo layout:
+- `packages/react/`: publishable React library.
+- `api/`: Express/Postgres backend and Gemini layout agent.
+- `demo/`: insurance-themed Vite demo app.
+
+Dev commands:
+- `pnpm dev:all` or `make dev`: start Postgres, run migrations, then run the library watcher, API, and demo together.
+- `pnpm dev`: watch-build only `@ui-morph/react`.
+- `pnpm dev:api`: run only the API on `:3001`.
+- `pnpm dev:demo`: run only the Vite demo.
+
 Current MVP customization scope:
 - Hide/show elements.
 - Change safe style values such as text color, background color, font size, width, and height.

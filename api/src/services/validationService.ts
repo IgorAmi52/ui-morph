@@ -54,6 +54,12 @@ const ALLOWED_STYLE_PROPS = new Set([
   'gap',
   'gridTemplateColumns',
   'gridTemplateRows',
+  'gridColumn',
+  'gridColumnStart',
+  'gridColumnEnd',
+  'gridRow',
+  'gridRowStart',
+  'gridRowEnd',
   'left',
   'top',
   'right',
@@ -267,7 +273,77 @@ function validateLayoutNode(node: unknown, label: string): LayoutNode {
   if (n.override !== undefined) {
     result.override = validateOverride(n.override as ElementOverride);
   }
+  if (n.computed !== undefined && typeof n.computed === 'object' && n.computed !== null && !Array.isArray(n.computed)) {
+    const computed = n.computed as Record<string, unknown>;
+    result.computed = {};
+    if (computed.color !== undefined) result.computed.color = String(computed.color);
+    if (computed.fontSize !== undefined) result.computed.fontSize = String(computed.fontSize);
+    if (computed.backgroundColor !== undefined) result.computed.backgroundColor = String(computed.backgroundColor);
+  }
+  if (n.layout !== undefined && typeof n.layout === 'object' && n.layout !== null && !Array.isArray(n.layout)) {
+    const layout = n.layout as Record<string, unknown>;
+    if (typeof layout.display === 'string' && typeof layout.isGridItem === 'boolean') {
+      result.layout = {
+        display: layout.display,
+        isGridItem: layout.isGridItem,
+      };
+      if (typeof layout.gridColumn === 'string') result.layout.gridColumn = layout.gridColumn;
+      if (typeof layout.gridRow === 'string') result.layout.gridRow = layout.gridRow;
+      if (typeof layout.columnSpan === 'number') result.layout.columnSpan = layout.columnSpan;
+      if (typeof layout.maxColumnSpan === 'number') result.layout.maxColumnSpan = layout.maxColumnSpan;
+    }
+  }
+  if (n.bounds !== undefined && typeof n.bounds === 'object' && n.bounds !== null && !Array.isArray(n.bounds)) {
+    const bounds = n.bounds as Record<string, unknown>;
+    if (typeof bounds.width === 'number' && typeof bounds.height === 'number') {
+      result.bounds = {
+        width: bounds.width,
+        height: bounds.height,
+      };
+    }
+  }
+  if (n.capabilities !== undefined && typeof n.capabilities === 'object' && n.capabilities !== null && !Array.isArray(n.capabilities)) {
+    const capabilities = n.capabilities as Record<string, unknown>;
+    result.capabilities = {
+      visibility: capabilities.visibility === true,
+      text: capabilities.text === true,
+      style: capabilities.style === true,
+      resize: capabilities.resize === true,
+      reorder: capabilities.reorder === true,
+    };
+  }
   return result;
+}
+
+function validateStringArray(value: unknown, label: string): string[] {
+  if (!Array.isArray(value)) {
+    throw new ValidationError(`${label} must be an array`);
+  }
+  return value.map((entry, i) => {
+    if (typeof entry !== 'string' || !entry.trim()) {
+      throw new ValidationError(`${label}[${i}] must be a non-empty string`);
+    }
+    return entry.trim();
+  });
+}
+
+function validateAgentEditScope(scope: unknown): AgentMessageRequest['editScope'] {
+  if (typeof scope !== 'object' || scope === null || Array.isArray(scope)) {
+    throw new ValidationError('editScope must be an object');
+  }
+  const s = scope as Record<string, unknown>;
+  if (s.mode !== 'selected-subtree' && s.mode !== 'page') {
+    throw new ValidationError('editScope.mode must be selected-subtree or page');
+  }
+  if (typeof s.rootPath !== 'string' || !s.rootPath.trim()) {
+    throw new ValidationError('editScope.rootPath is required');
+  }
+  return {
+    rootPath: s.rootPath.trim(),
+    allowedPaths: validateStringArray(s.allowedPaths, 'editScope.allowedPaths'),
+    allowedParentPaths: validateStringArray(s.allowedParentPaths, 'editScope.allowedParentPaths'),
+    mode: s.mode,
+  };
 }
 
 function validateLayoutSnapshot(snapshot: unknown): LayoutSnapshot {
@@ -527,6 +603,11 @@ export function validateAgentMessageRequest(body: unknown): AgentMessageRequest 
     selectionSubtree = validateLayoutNode(b.selectionSubtree, 'selectionSubtree');
   }
 
+  let editScope: AgentMessageRequest['editScope'];
+  if (b.editScope !== undefined) {
+    editScope = validateAgentEditScope(b.editScope);
+  }
+
   return {
     userId: b.userId.trim(),
     viewId: b.viewId.trim(),
@@ -535,8 +616,11 @@ export function validateAgentMessageRequest(body: unknown): AgentMessageRequest 
     selectionLabel:
       typeof b.selectionLabel === 'string' ? b.selectionLabel : undefined,
     selectionSubtree,
+    editScope,
     snapshot,
     config,
     history,
+    instructionsOverride:
+      typeof b.instructionsOverride === 'string' ? b.instructionsOverride : undefined,
   };
 }

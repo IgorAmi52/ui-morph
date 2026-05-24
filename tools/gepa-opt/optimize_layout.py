@@ -18,13 +18,13 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-API_ENV_PATH = REPO_ROOT / "packages/api/.env"
+API_ENV_PATH = REPO_ROOT / "api/.env"
 ARTIFACTS_DIR = Path(__file__).resolve().parent / "artifacts"
 SEED_PATH = Path(__file__).resolve().parent / "seed_instructions.md"
 
 
 def load_env_file(path: Path) -> None:
-    """Load packages/api/.env into os.environ (same as tools/agent-eval/run_eval.ts)."""
+    """Load api/.env into os.environ (same as tools/agent-eval/run_eval.ts)."""
     if not path.is_file():
         return
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -47,7 +47,7 @@ def load_env_file(path: Path) -> None:
 def load_seed() -> str:
     if SEED_PATH.is_file():
         return SEED_PATH.read_text(encoding="utf-8")
-    seed_ts = REPO_ROOT / "packages/api/src/agent/layoutInstructions.ts"
+    seed_ts = REPO_ROOT / "api/src/agent/layoutInstructions.ts"
     raise FileNotFoundError(
         f"Missing seed at {SEED_PATH}. Copy instructions from {seed_ts} or run export script."
     )
@@ -72,7 +72,7 @@ def parse_eval_stdout(stdout: str) -> dict:
 def run_eval(candidate: str, split: str = "train") -> dict:
     import tempfile
 
-    tsx = REPO_ROOT / "packages/api/node_modules/.bin/tsx"
+    tsx = REPO_ROOT / "api/node_modules/.bin/tsx"
     run_eval_ts = REPO_ROOT / "tools/agent-eval/run_eval.ts"
     if not tsx.is_file():
         raise FileNotFoundError(f"tsx not found at {tsx}; run pnpm install at repo root")
@@ -131,7 +131,7 @@ def main() -> None:
     if not os.environ.get("GEMINI_API_KEY", "").strip():
         print(
             "GEMINI_API_KEY is required for scenario eval.\n"
-            f"Set it in {API_ENV_PATH} (see packages/api/.env.example).",
+            f"Set it in {API_ENV_PATH} (see api/.env.example).",
             file=sys.stderr,
         )
         raise SystemExit(1)

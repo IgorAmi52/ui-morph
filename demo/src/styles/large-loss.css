@@ -1,13 +1,13 @@
 .legacy-console {
-  min-width: 1160px;
+  min-width: 1080px;
   color: #172033;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .legacy-module-board {
   display: grid;
-  grid-template-columns: repeat(12, minmax(72px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(12, minmax(64px, 1fr));
+  gap: 6px;
   align-items: start;
 }
 
@@ -44,9 +44,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  min-height: 42px;
-  padding: 7px 12px;
+  gap: 12px;
+  min-height: 36px;
+  padding: 5px 10px;
   border: 1px solid #cbd5e1;
   background: #111827;
   color: #e5e7eb;
@@ -74,14 +74,14 @@
 }
 
 .legacy-topbar__brand strong {
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
 .legacy-topbar__brand span {
   color: #9ca3af;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .legacy-topbar__actions {
@@ -100,15 +100,15 @@
 
 .legacy-topbar button {
   gap: 5px;
-  height: 28px;
-  padding: 0 8px;
+  height: 24px;
+  padding: 0 7px;
 }
 
 .legacy-alert-strip {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   overflow-x: auto;
-  padding: 6px 8px;
+  padding: 5px 6px;
   border: 1px solid #f59e0b;
   background: #fffbeb;
   color: #78350f;
@@ -117,7 +117,7 @@
 
 .legacy-alert-strip span {
   gap: 5px;
-  padding: 3px 8px;
+  padding: 2px 7px;
   border: 1px solid #fcd34d;
   border-radius: 2px;
   background: #fef3c7;
@@ -133,9 +133,9 @@
 }
 
 .legacy-tabs__tab {
-  height: 31px;
-  min-width: 92px;
-  padding: 0 10px;
+  height: 28px;
+  min-width: 84px;
+  padding: 0 8px;
   border-color: #cbd5e1;
   border-top: none;
   border-bottom: none;
@@ -154,8 +154,8 @@
 
 .legacy-toolbar {
   justify-content: space-between;
-  gap: 8px;
-  padding: 8px;
+  gap: 6px;
+  padding: 6px;
   border: 1px solid #cbd5e1;
   background: #f8fafc;
 }
@@ -164,8 +164,8 @@
   flex: 1;
   gap: 6px;
   min-width: 360px;
-  height: 30px;
-  padding: 0 8px;
+  height: 26px;
+  padding: 0 7px;
   border: 1px solid #94a3b8;
   background: #ffffff;
 }
@@ -188,8 +188,8 @@
 
 .legacy-toolbar button {
   gap: 5px;
-  height: 30px;
-  padding: 0 8px;
+  height: 26px;
+  padding: 0 7px;
   border-color: #94a3b8;
   background: #ffffff;
   color: #334155;
@@ -199,9 +199,9 @@
   position: sticky;
   top: 8px;
   display: grid;
-  gap: 8px;
+  gap: 6px;
   max-height: calc(100vh - 72px);
-  padding: 8px;
+  padding: 6px;
   overflow: auto;
   border: 1px solid #cbd5e1;
   background: #f1f5f9;
@@ -209,8 +209,8 @@
 
 .legacy-panel__heading {
   gap: 6px;
-  min-height: 26px;
-  padding: 0 8px;
+  min-height: 24px;
+  padding: 0 7px;
   border: 1px solid #cbd5e1;
   background: #e2e8f0;
   color: #334155;
@@ -224,7 +224,7 @@
 }
 
 .legacy-nav-group strong {
-  padding: 7px 8px;
+  padding: 5px 7px;
   border-bottom: 1px solid #cbd5e1;
   background: #f8fafc;
   color: #111827;
@@ -233,8 +233,8 @@
 
 .legacy-service-nav button {
   justify-content: space-between;
-  min-height: 28px;
-  padding: 0 8px 0 18px;
+  min-height: 24px;
+  padding: 0 7px 0 16px;
   border-bottom: 1px solid #e2e8f0;
   color: #334155;
   font-size: 11px;
@@ -247,9 +247,9 @@
 
 .legacy-filter-cloud {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  gap: 8px;
-  padding: 8px;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 6px;
+  padding: 6px;
   border: 1px solid #cbd5e1;
   background: #ffffff;
 }
@@ -261,7 +261,7 @@
 }
 
 .legacy-filter-cloud > div:last-child span {
-  padding: 3px 7px;
+  padding: 2px 6px;
   border: 1px solid #bae6fd;
   border-radius: 2px;
   background: #eff6ff;
@@ -271,15 +271,15 @@
 }
 
 .legacy-metric {
-  min-height: 96px;
-  padding: 8px;
+  min-height: 78px;
+  padding: 6px;
   border: 1px solid #cbd5e1;
   background: #ffffff;
 }
 
 .legacy-metric span {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   color: #64748b;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10px;
@@ -288,12 +288,12 @@
 .legacy-metric strong {
   display: block;
   color: #111827;
-  font-size: 20px;
+  font-size: 17px;
   line-height: 1.05;
 }
 
 .legacy-metric p {
-  margin-top: 5px;
+  margin-top: 4px;
   color: #334155;
   font-size: 11px;
   font-weight: 700;
@@ -301,7 +301,7 @@
 
 .legacy-metric em {
   display: block;
-  margin-top: 4px;
+  margin-top: 3px;
   color: #64748b;
   font-size: 10px;
   font-style: normal;
@@ -338,21 +338,21 @@
 
 .legacy-panel__title {
   justify-content: space-between;
-  gap: 8px;
-  min-height: 34px;
-  padding: 6px 8px;
+  gap: 6px;
+  min-height: 29px;
+  padding: 4px 7px;
   border-bottom: 1px solid #cbd5e1;
   background: #f8fafc;
 }
 
 .legacy-panel__title h2 {
   color: #111827;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0;
 }
 
 .legacy-panel__title p {
-  margin-top: 2px;
+  margin-top: 1px;
   color: #64748b;
   font-size: 10px;
 }
@@ -363,40 +363,40 @@
 }
 
 .legacy-panel-note {
-  padding: 0 8px 8px;
+  padding: 0 7px 6px;
   color: #64748b;
   font-size: 10px;
 }
 
 .legacy-console .data-table th {
-  padding: 7px 8px;
+  padding: 5px 7px;
   background: #f8fafc;
   color: #475569;
   font-size: 10px;
 }
 
 .legacy-console .data-table td {
-  padding: 8px;
+  padding: 6px 7px;
   font-size: 11px;
 }
 
 .legacy-chart {
-  padding: 10px;
+  padding: 8px;
 }
 
 .legacy-chart--spark {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 140px;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 124px;
+  gap: 8px;
   align-items: end;
 }
 
 .legacy-spark-bars {
   display: flex;
   align-items: end;
-  gap: 5px;
-  height: 132px;
-  padding: 10px 8px 0;
+  gap: 4px;
+  height: 104px;
+  padding: 8px 7px 0;
   border: 1px solid #e2e8f0;
   background:
     linear-gradient(#f1f5f9 1px, transparent 1px) 0 0 / 100% 25%,
@@ -411,8 +411,8 @@
 
 .legacy-chart__legend {
   display: grid;
-  gap: 8px;
-  padding: 10px;
+  gap: 6px;
+  padding: 8px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
 }
@@ -424,18 +424,18 @@
 
 .legacy-chart__legend strong {
   color: #111827;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .legacy-heatmap {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 4px;
-  padding: 10px;
+  gap: 3px;
+  padding: 8px;
 }
 
 .legacy-heatmap__cell {
-  height: 22px;
+  height: 18px;
   border: 1px solid #e2e8f0;
   background: #ecfeff;
 }
@@ -463,15 +463,15 @@
 .legacy-stack-bars,
 .legacy-rank-bars {
   display: grid;
-  gap: 8px;
-  padding: 10px;
+  gap: 6px;
+  padding: 8px;
 }
 
 .legacy-stack-bars > div,
 .legacy-rank-bars > div {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr) 28px;
-  gap: 6px;
+  grid-template-columns: 48px minmax(0, 1fr) 26px;
+  gap: 5px;
   align-items: center;
 }
 
@@ -515,16 +515,16 @@
 
 .legacy-funnel {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   justify-items: center;
-  padding: 12px 10px;
+  padding: 9px 8px;
 }
 
 .legacy-funnel div {
   display: flex;
   justify-content: space-between;
-  min-height: 28px;
-  padding: 6px 10px;
+  min-height: 24px;
+  padding: 5px 8px;
   background: #e0f2fe;
   color: #0f172a;
 }
@@ -540,10 +540,10 @@
 
 .legacy-field-table div {
   display: grid;
-  grid-template-columns: 118px minmax(0, 1fr);
-  gap: 6px;
-  min-height: 28px;
-  padding: 6px 8px;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 5px;
+  min-height: 24px;
+  padding: 5px 7px;
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -572,7 +572,7 @@
 
 .legacy-mini-table__head span,
 .legacy-mini-table__row span {
-  padding: 7px 8px;
+  padding: 5px 7px;
   border-right: 1px solid #e2e8f0;
   border-bottom: 1px solid #e2e8f0;
   font-size: 10px;
@@ -595,8 +595,8 @@
 .legacy-job {
   display: grid;
   grid-template-columns: 58px minmax(0, 1fr) auto;
-  gap: 5px 8px;
-  padding: 8px;
+  gap: 4px 6px;
+  padding: 6px 7px;
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -625,7 +625,7 @@
 }
 
 .legacy-dense-list li {
-  padding: 8px 10px;
+  padding: 6px 8px;
   border-bottom: 1px solid #e2e8f0;
   color: #334155;
   font-size: 11px;
@@ -650,9 +650,9 @@
 .legacy-vendor-table > div {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(88px, 0.8fr) minmax(94px, 0.8fr) auto;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
-  padding: 8px;
+  padding: 6px 7px;
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -662,9 +662,9 @@
 }
 
 .legacy-check-list li {
-  gap: 7px;
-  min-height: 31px;
-  padding: 6px 10px;
+  gap: 6px;
+  min-height: 26px;
+  padding: 5px 8px;
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -679,15 +679,15 @@
 }
 
 .legacy-timeline {
-  max-height: 280px;
+  max-height: 240px;
   overflow: auto;
 }
 
 .legacy-timeline div {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
-  gap: 4px 8px;
-  padding: 8px;
+  gap: 3px 6px;
+  padding: 6px 7px;
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -712,7 +712,7 @@
 
 .legacy-panel pre {
   margin: 0;
-  padding: 10px;
+  padding: 8px;
   overflow: auto;
   background: #0f172a;
   color: #d1fae5;
@@ -723,12 +723,12 @@
 .legacy-health-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  padding: 10px;
+  gap: 6px;
+  padding: 8px;
 }
 
 .legacy-health-grid div {
-  padding: 8px;
+  padding: 6px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
 }
@@ -744,7 +744,7 @@
 }
 
 .legacy-health-grid strong {
-  margin-top: 4px;
+  margin-top: 3px;
   color: #111827;
   font-size: 15px;
 }
@@ -764,11 +764,11 @@
 
 @media (max-width: 1280px) {
   .legacy-console {
-    min-width: 980px;
+    min-width: 920px;
   }
 
   .legacy-module-board {
-    grid-template-columns: repeat(8, minmax(82px, 1fr));
+    grid-template-columns: repeat(8, minmax(76px, 1fr));
   }
 
   .legacy-module--xwide {
@@ -788,11 +788,11 @@
 
 @media (max-width: 900px) {
   .legacy-console {
-    min-width: 760px;
+    min-width: 700px;
   }
 
   .legacy-module-board {
-    grid-template-columns: repeat(4, minmax(140px, 1fr));
+    grid-template-columns: repeat(4, minmax(128px, 1fr));
   }
 
   .legacy-module--xwide,

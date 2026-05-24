@@ -15,6 +15,11 @@ import {
   type GridSplitContext,
   type GridSplitHandle,
 } from './gridSplitResize';
+import {
+  formatGridColumnSpan,
+  getGridItemResizeContext,
+  type GridItemResizeContext,
+} from './gridItemResize';
 
 interface SelectionOverlayProps {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -35,6 +40,7 @@ interface ResizeState extends ResizeBounds {
   startY: number;
   startWidth: number;
   startHeight: number;
+  gridItem: GridItemResizeContext | null;
   horizontalOffsetProp: 'left' | 'marginLeft';
   verticalOffsetProp: 'top' | 'marginTop';
   startHorizontalOffset: number;
@@ -66,8 +72,8 @@ function supportsBoxResize(el: HTMLElement): boolean {
   return getComputedStyle(el).display !== 'inline';
 }
 
-function getBoxResizeDirections(el: HTMLElement, inFluidGrid: boolean): ResizeDirection[] {
-  if (inFluidGrid) return [];
+function getBoxResizeDirections(el: HTMLElement, inFluidGrid: boolean, inResizableGridItem: boolean): ResizeDirection[] {
+  if (inFluidGrid && !inResizableGridItem) return [];
   if (!supportsBoxResize(el)) return [];
   if (!isCapabilityEnabled(getDisabledCapabilities(el), 'resize')) return [];
   return RESIZE_DIRECTIONS;
@@ -195,11 +201,13 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
       const parent = el.parentElement;
       const parentPath = parent?.getAttribute('data-morph-path') ?? undefined;
       const parentStyleOverride = parentPath ? config[parentPath]?.style : undefined;
-      const splitContext = isCapabilityEnabled(getDisabledCapabilities(el), 'resize')
+      const canResize = isCapabilityEnabled(getDisabledCapabilities(el), 'resize');
+      const itemResizeContext = canResize ? getGridItemResizeContext(el) : null;
+      const splitContext = canResize && !itemResizeContext
         ? getGridSplitContext(el, parentStyleOverride)
         : null;
       setGridSplit(splitContext);
-      setResizeDirections(getBoxResizeDirections(el, Boolean(splitContext)));
+      setResizeDirections(getBoxResizeDirections(el, Boolean(splitContext), Boolean(itemResizeContext)));
     } else {
       setRect(null);
       setResizeDirections([]);
@@ -341,7 +349,8 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
     const el = containerRef.current.querySelector<HTMLElement>(
       `[data-morph-path="${CSS.escape(selectedPath)}"]`,
     );
-    if (!el || !getBoxResizeDirections(el, Boolean(gridSplit)).includes(direction)) return;
+    const itemResizeContext = el ? getGridItemResizeContext(el) : null;
+    if (!el || !getBoxResizeDirections(el, Boolean(gridSplit), Boolean(itemResizeContext)).includes(direction)) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -356,6 +365,7 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
       startY: event.clientY,
       startWidth: startRect.width,
       startHeight: startRect.height,
+      gridItem: itemResizeContext,
       horizontalOffsetProp: isPositioned ? 'left' : 'marginLeft',
       verticalOffsetProp: isPositioned ? 'top' : 'marginTop',
       startHorizontalOffset: isPositioned
@@ -383,7 +393,16 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
       const dy = moveEvent.clientY - resizeState.startY;
       const nextStyle: PendingBoxStyle = {};
 
-      if (resizeState.direction.includes('e')) {
+      if (resizeState.gridItem && (resizeState.direction.includes('e') || resizeState.direction.includes('w'))) {
+        const horizontalDelta = resizeState.direction.includes('e') ? dx : -dx;
+        const columnDelta = Math.round(horizontalDelta / resizeState.gridItem.columnStepPx);
+        const columnSpan = clamp(
+          resizeState.gridItem.columnSpan + columnDelta,
+          1,
+          resizeState.gridItem.maxColumnSpan,
+        );
+        nextStyle.gridColumn = formatGridColumnSpan(columnSpan);
+      } else if (resizeState.direction.includes('e')) {
         const width = Math.round(clamp(
           resizeState.startWidth + dx,
           resizeState.minWidth,
@@ -392,7 +411,7 @@ export function SelectionOverlay({ containerRef }: SelectionOverlayProps) {
         nextStyle.width = `${width}px`;
       }
 
-      if (resizeState.direction.includes('w')) {
+      if (!resizeState.gridItem && resizeState.direction.includes('w')) {
         const width = Math.round(clamp(
           resizeState.startWidth - dx,
           resizeState.minWidth,

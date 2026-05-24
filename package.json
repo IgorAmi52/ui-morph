@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @ui-morph/react dev",
+    "dev:all": "pnpm db:up && pnpm db:migrate && pnpm -r --parallel --filter @ui-morph/react --filter @ui-morph/api --filter demo dev",
     "dev:api": "pnpm --filter @ui-morph/api dev",
     "dev:demo": "pnpm --filter demo dev",
     "build": "pnpm --filter @ui-morph/react build",
@@ -16,13 +17,13 @@
     "build:demo": "pnpm --filter demo build",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
-    "db:up": "docker compose up -d postgres",
+    "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose down",
     "db:migrate": "pnpm --filter @ui-morph/api migrate",
     "test": "pnpm --filter @ui-morph/api test && pnpm --filter @ui-morph/react test",
-    "eval:agent": "pnpm --filter @ui-morph/api exec tsx ../../tools/agent-eval/run_eval.ts",
-    "eval:agent:score": "pnpm --filter @ui-morph/api exec tsx ../../tools/agent-eval/run_eval.ts --json",
-    "eval:agent:train": "pnpm --filter @ui-morph/api exec tsx ../../tools/agent-eval/run_eval.ts --split train",
+    "eval:agent": "pnpm --filter @ui-morph/api exec tsx ../tools/agent-eval/run_eval.ts",
+    "eval:agent:score": "pnpm --filter @ui-morph/api exec tsx ../tools/agent-eval/run_eval.ts --json",
+    "eval:agent:train": "pnpm --filter @ui-morph/api exec tsx ../tools/agent-eval/run_eval.ts --split train",
     "gepa:optimize": "cd tools/gepa-opt && uv run optimize_layout.py"
   }
 }

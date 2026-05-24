@@ -155,7 +155,7 @@ export default function LargeLoss() {
           </div>
         </header>
 
-        <section className="legacy-alert-strip legacy-module legacy-module--full" data-morph-id="global-alert-strip">
+        <section className="legacy-alert-strip legacy-module legacy-module--full" data-morph-id="global-alert-strip" data-morph-resize="box">
           <span><AlertTriangle size={14} /> Reserve authority sync failed at 11:39</span>
           <span>7 SLA breaches</span>
           <span>4 litigation holds</span>
@@ -171,7 +171,7 @@ export default function LargeLoss() {
           ))}
         </nav>
 
-        <section className="legacy-toolbar legacy-module legacy-module--full" data-morph-id="filter-toolbar">
+        <section className="legacy-toolbar legacy-module legacy-module--full" data-morph-id="filter-toolbar" data-morph-resize="box">
           <div className="legacy-search">
             <Search size={15} />
             <input value="event:MW-0524 severity:high reserve:>500000 coverage:hold" readOnly />
@@ -201,7 +201,7 @@ export default function LargeLoss() {
           ))}
         </aside>
 
-        <section className="legacy-filter-cloud legacy-module legacy-module--xwide" data-morph-id="active-filter-cloud">
+        <section className="legacy-filter-cloud legacy-module legacy-module--xwide" data-morph-id="active-filter-cloud" data-morph-resize="box">
           <div className="legacy-panel__heading">
             <Filter size={14} />
             <span>Active constraints</span>
@@ -258,7 +258,7 @@ export default function LargeLoss() {
           <Funnel data={authorityFunnel} />
         </section>
 
-        <section className="legacy-panel legacy-module legacy-module--xwide" data-morph-id="claim-workload-table">
+        <section className="legacy-panel legacy-module legacy-module--xwide" data-morph-id="claim-workload-table" data-morph-resize="box">
           <div className="legacy-panel__title">
             <div>
               <h2>Large loss workload matrix</h2>
@@ -302,7 +302,7 @@ export default function LargeLoss() {
           </div>
         </section>
 
-        <section className="legacy-panel legacy-module legacy-module--wide" data-morph-id="reserve-layer-stack">
+        <section className="legacy-panel legacy-module legacy-module--wide" data-morph-id="reserve-layer-stack" data-morph-resize="box">
           <div className="legacy-panel__title">
             <h2>Reserve layer stack</h2>
             <DollarIcon />
@@ -325,7 +325,7 @@ export default function LargeLoss() {
           </div>
         </section>
 
-        <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="rule-diagnostics">
+        <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="rule-diagnostics" data-morph-resize="box">
           <div className="legacy-panel__title">
             <h2>Rule diagnostics</h2>
             <FileText size={14} />
@@ -342,7 +342,7 @@ export default function LargeLoss() {
           </div>
         </section>
 
-        <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="coverage-question-stack">
+        <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="coverage-question-stack" data-morph-resize="box">
           <div className="legacy-panel__title">
             <h2>Coverage issue stack</h2>
             <span className="badge badge--warning">11 open</span>
@@ -358,7 +358,7 @@ export default function LargeLoss() {
           </ul>
         </section>
 
-        <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="batch-job-monitor">
+        <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="batch-job-monitor" data-morph-resize="box">
           <div className="legacy-panel__title">
             <h2>Batch job monitor</h2>
             <Clock size={14} />
@@ -375,7 +375,7 @@ export default function LargeLoss() {
           </div>
         </section>
 
-        <section className="legacy-panel legacy-module legacy-module--wide" data-morph-id="vendor-sla-panel">
+        <section className="legacy-panel legacy-module legacy-module--wide" data-morph-id="vendor-sla-panel" data-morph-resize="box">
           <div className="legacy-panel__title">
             <h2>Vendor SLA console</h2>
             <span className="badge badge--warning">capacity risk</span>
@@ -392,7 +392,7 @@ export default function LargeLoss() {
           </div>
         </section>
 
-        <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="compliance-checklist">
+        <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="compliance-checklist" data-morph-resize="box">
           <div className="legacy-panel__title">
             <h2>Compliance checklist</h2>
             <span className="badge badge--info">6 controls</span>
@@ -407,7 +407,7 @@ export default function LargeLoss() {
           </ul>
         </section>
 
-        <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="audit-timeline">
+        <section className="legacy-panel legacy-module legacy-module--narrow" data-morph-id="audit-timeline" data-morph-resize="box">
           <div className="legacy-panel__title">
             <h2>Audit and diary stream</h2>
             <span className="badge badge--neutral">live</span>
@@ -426,7 +426,7 @@ export default function LargeLoss() {
           </div>
         </section>
 
-        <section className="legacy-panel legacy-module legacy-module--wide" data-morph-id="raw-system-payload">
+        <section className="legacy-panel legacy-module legacy-module--wide" data-morph-id="raw-system-payload" data-morph-resize="box">
           <div className="legacy-panel__title">
             <h2>Raw policy/claim payload preview</h2>
             <span className="badge badge--neutral">legacy JSON</span>

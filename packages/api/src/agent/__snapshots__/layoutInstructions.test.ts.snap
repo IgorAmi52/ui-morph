@@ -1,3 +1,0 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
-
-exports[`layoutInstructions > has stable content hash unless instructions intentionally change 1`] = `"ad0d7e01a71abe6859f13e3e888ebbf117c3cbe37fc8c7dd5bba96badc236ebe"`;

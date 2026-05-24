@@ -1,5 +1,7 @@
 import type { LayoutNode, LayoutSnapshot, MorphConfig } from '../types';
 import { getSegment } from '../tree/domDecorator';
+import { getDisabledCapabilities, isCapabilityEnabled } from '../editor/capabilities';
+import { getGridItemResizeContext } from '../editor/gridItemResize';
 
 const MAX_NODES = 200;
 const TEXT_TRUNCATE = 80;
@@ -23,6 +25,41 @@ function readComputed(el: HTMLElement): LayoutNode['computed'] {
     color: style.color,
     fontSize: style.fontSize,
     backgroundColor: style.backgroundColor,
+  };
+}
+
+function readLayout(el: HTMLElement): LayoutNode['layout'] {
+  const style = getComputedStyle(el);
+  const gridItem = getGridItemResizeContext(el);
+
+  return {
+    display: style.display,
+    isGridItem: Boolean(gridItem),
+    gridColumn: style.gridColumn,
+    gridRow: style.gridRow,
+    columnSpan: gridItem?.columnSpan,
+    maxColumnSpan: gridItem?.maxColumnSpan,
+  };
+}
+
+function readBounds(el: HTMLElement): LayoutNode['bounds'] {
+  const rect = el.getBoundingClientRect();
+  return {
+    width: Math.round(rect.width),
+    height: Math.round(rect.height),
+  };
+}
+
+function readCapabilities(el: HTMLElement, textLeaf: boolean): LayoutNode['capabilities'] {
+  const disabled = getDisabledCapabilities(el);
+  return {
+    visibility: isCapabilityEnabled(disabled, 'visibility'),
+    text: textLeaf,
+    style: isCapabilityEnabled(disabled, 'textColor') ||
+      isCapabilityEnabled(disabled, 'background') ||
+      isCapabilityEnabled(disabled, 'resize'),
+    resize: isCapabilityEnabled(disabled, 'resize'),
+    reorder: isCapabilityEnabled(disabled, 'reorder'),
   };
 }
 
@@ -87,6 +124,9 @@ function buildNode(
     hidden: override?.hidden ?? false,
     override: override ? { ...override } : undefined,
     computed: readComputed(el),
+    layout: readLayout(el),
+    bounds: readBounds(el),
+    capabilities: readCapabilities(el, textLeaf),
     children,
   };
 }

@@ -4,7 +4,7 @@ import type {
   ElementOverride,
   LayoutSnapshot,
   MorphConfig,
-} from '../../packages/api/src/types.js';
+} from '../../api/src/types.js';
 
 export type ScenarioSplit = 'train' | 'val';
 

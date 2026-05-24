@@ -36,7 +36,7 @@ export function errorHandler(
         'Gemini API rate limit or quota exceeded. Try again later, switch GEMINI_MODEL ' +
         '(e.g. gemini-2.5-flash), or enable billing in Google AI Studio.';
     } else if (status === 401 || status === 403) {
-      message = 'Gemini API rejected the API key. Check GEMINI_API_KEY in packages/api/.env.';
+      message = 'Gemini API rejected the API key. Check GEMINI_API_KEY in api/.env.';
     }
     res.status(status >= 400 && status < 600 ? status : 502).json({ error: message });
     return;

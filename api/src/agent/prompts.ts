@@ -34,6 +34,14 @@ export function buildSystemPrompt(
     }
   }
 
+  if (request.editScope) {
+    lines.push(
+      '',
+      'Current edit scope JSON (hard limit for tools):',
+      JSON.stringify(request.editScope, null, 2),
+    );
+  }
+
   if (request.snapshot.truncated) {
     lines.push(
       '',

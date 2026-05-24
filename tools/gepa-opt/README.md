@@ -1,12 +1,12 @@
 # GEPA layout agent optimization
 
-Offline prompt evolution for the static instructions in [`layoutInstructions.ts`](../../packages/api/src/agent/layoutInstructions.ts).
+Offline prompt evolution for the static instructions in [`layoutInstructions.ts`](../../api/src/agent/layoutInstructions.ts).
 
 ## Prerequisites
 
 - Node 18+, pnpm (`pnpm install` at repo root)
 - Python 3.10+ with [uv](https://github.com/astral-sh/uv)
-- `GEMINI_API_KEY` in `packages/api/.env` (runs real agent scenarios per eval)
+- `GEMINI_API_KEY` in `api/.env` (runs real agent scenarios per eval)
 - Reflection LM for GEPA (default `gemini/gemini-2.0-flash` via `GEPA_REFLECTION_LM`)
 
 ## Quick start
@@ -15,8 +15,9 @@ Offline prompt evolution for the static instructions in [`layoutInstructions.ts`
 # From repo root
 pnpm install
 cd tools/gepa-opt && uv sync
+```
 
-Uses `GEMINI_API_KEY` from `packages/api/.env` automatically (same as `pnpm eval:agent`).
+Uses `GEMINI_API_KEY` from `api/.env` automatically (same as `pnpm eval:agent`).
 
 `uv sync` installs `gepa[full]` (includes `litellm` for reflection). First run: `cd tools/gepa-opt && uv sync`.
 

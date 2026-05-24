@@ -5,7 +5,7 @@ Golden scenarios for regression-testing the Gemini layout agent.
 ## Run
 
 ```bash
-# From repo root (requires packages/api/.env with GEMINI_API_KEY)
+# From repo root (requires api/.env with GEMINI_API_KEY)
 pnpm eval:agent
 pnpm eval:agent -- --split val
 pnpm eval:agent:score -- --split val     # JSON for tooling

@@ -9,7 +9,7 @@ import { readFile, readFileSync } from 'node:fs';
 import { readFile as readFileAsync } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LAYOUT_AGENT_INSTRUCTIONS_VERSION } from '../../packages/api/src/agent/layoutInstructions.js';
+import { LAYOUT_AGENT_INSTRUCTIONS_VERSION } from '../../api/src/agent/layoutInstructions.js';
 import { loadScenarios } from './loadScenarios.js';
 import { runScenario } from './runScenario.js';
 import { scoreScenarioRun } from './scoreScenario.js';
@@ -40,7 +40,7 @@ function loadEnvFile(filePath: string): void {
   }
 }
 
-loadEnvFile(path.join(repoRoot, 'packages/api/.env'));
+loadEnvFile(path.join(repoRoot, 'api/.env'));
 
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
@@ -77,7 +77,7 @@ async function main(): Promise<void> {
   const { split, instructionsPath, jsonOnly } = parseArgs(process.argv.slice(2));
 
   if (!process.env.GEMINI_API_KEY?.trim()) {
-    console.error('GEMINI_API_KEY is not set. Add it to packages/api/.env');
+    console.error('GEMINI_API_KEY is not set. Add it to api/.env');
     process.exit(1);
   }
 

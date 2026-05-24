@@ -34,6 +34,25 @@ export interface LayoutNode {
     fontSize?: string;
     backgroundColor?: string;
   };
+  layout?: {
+    display: string;
+    isGridItem: boolean;
+    gridColumn?: string;
+    gridRow?: string;
+    columnSpan?: number;
+    maxColumnSpan?: number;
+  };
+  bounds?: {
+    width: number;
+    height: number;
+  };
+  capabilities?: {
+    visibility: boolean;
+    text: boolean;
+    style: boolean;
+    resize: boolean;
+    reorder: boolean;
+  };
   children: LayoutNode[];
 }
 
@@ -52,6 +71,13 @@ export interface ConfigChangeSummary {
   label: string;
 }
 
+export interface AgentEditScope {
+  rootPath: string;
+  allowedPaths: string[];
+  allowedParentPaths: string[];
+  mode: 'selected-subtree' | 'page';
+}
+
 export interface AgentChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -64,6 +90,7 @@ export interface AgentMessageRequest {
   selectedPath?: string;
   selectionLabel?: string;
   selectionSubtree?: LayoutNode;
+  editScope?: AgentEditScope;
   snapshot: LayoutSnapshot;
   config: MorphConfig;
   history?: AgentChatMessage[];

@@ -1,5 +1,5 @@
-import type { AgentMessageRequest } from '../../packages/api/src/types.js';
-import { runLayoutAgent } from '../../packages/api/src/services/layoutAgent.js';
+import type { AgentMessageRequest } from '../../api/src/types.js';
+import { runLayoutAgent } from '../../api/src/services/layoutAgent.js';
 import type { AgentScenario, ScenarioRunResult } from './types.js';
 
 export function scenarioToRequest(

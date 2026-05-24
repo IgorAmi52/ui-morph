@@ -905,6 +905,11 @@ const EDITOR_STYLES = `
   gap: 8px;
 }
 
+.morph-editor-control__unit {
+  color: #64748b;
+  font-size: 13px;
+}
+
 .morph-editor-input {
   width: 100%;
   padding: 8px 10px;

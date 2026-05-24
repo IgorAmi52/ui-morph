@@ -1,5 +1,5 @@
-import type { ElementOverride, MorphConfig } from '../../packages/api/src/types.js';
-import { LAYOUT_AGENT_INSTRUCTIONS_VERSION } from '../../packages/api/src/agent/layoutInstructions.js';
+import type { ElementOverride, MorphConfig } from '../../api/src/types.js';
+import { LAYOUT_AGENT_INSTRUCTIONS_VERSION } from '../../api/src/agent/layoutInstructions.js';
 import type { AgentScenario, ScenarioRunResult, ScenarioScore } from './types.js';
 
 function partialMatch(

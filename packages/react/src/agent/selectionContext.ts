@@ -1,4 +1,5 @@
-import type { LayoutNode } from '../types';
+import type { AgentEditScope, LayoutNode, LayoutSnapshot } from '../types';
+import { MORPH_ROOT_PATH } from './serializeLayoutSnapshot';
 
 const MAX_SUBTREE_NODES = 40;
 
@@ -29,6 +30,52 @@ export function extractSelectionSubtree(
   if (!match) return undefined;
   const state = { count: 0 };
   return cloneCapped(match, state);
+}
+
+function collectScopePaths(
+  node: LayoutNode,
+  allowedPaths: string[],
+  allowedParentPaths: string[],
+): void {
+  allowedPaths.push(node.path);
+  if (node.children.length > 0) allowedParentPaths.push(node.path);
+  for (const child of node.children) {
+    collectScopePaths(child, allowedPaths, allowedParentPaths);
+  }
+}
+
+function collectPageScope(snapshot: LayoutSnapshot): AgentEditScope {
+  const allowedPaths: string[] = [];
+  const allowedParentPaths = [snapshot.rootPath ?? MORPH_ROOT_PATH];
+
+  for (const node of snapshot.nodes) {
+    collectScopePaths(node, allowedPaths, allowedParentPaths);
+  }
+
+  return {
+    rootPath: snapshot.rootPath ?? MORPH_ROOT_PATH,
+    allowedPaths,
+    allowedParentPaths,
+    mode: 'page',
+  };
+}
+
+export function deriveAgentEditScope(
+  snapshot: LayoutSnapshot,
+  selectionSubtree?: LayoutNode,
+): AgentEditScope {
+  if (!selectionSubtree) return collectPageScope(snapshot);
+
+  const allowedPaths: string[] = [];
+  const allowedParentPaths: string[] = [];
+  collectScopePaths(selectionSubtree, allowedPaths, allowedParentPaths);
+
+  return {
+    rootPath: snapshot.rootPath ?? MORPH_ROOT_PATH,
+    allowedPaths,
+    allowedParentPaths,
+    mode: 'selected-subtree',
+  };
 }
 
 export function selectionLabelFromPath(path: string): string {

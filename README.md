@@ -1,10 +1,12 @@
 # Prerequisites  
-- `node`  
+- `node >=18`
+- `pnpm >=9`
+- Docker, for the local Postgres service
 
-# Run test app  
-1. `cd test-app`  
-2. `npm install`    
-3. `npm run dev`    
+# Run everything
+1. `pnpm install`
+2. `pnpm dev:all`
 
+You can also use `make dev`, which delegates to `pnpm dev:all`.
 
 

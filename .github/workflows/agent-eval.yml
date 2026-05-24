@@ -3,7 +3,7 @@ name: Agent eval
 on:
   pull_request:
     paths:
-      - 'packages/api/**'
+      - 'api/**'
       - 'tools/agent-eval/**'
       - 'tools/gepa-opt/**'
       - '.github/workflows/agent-eval.yml'
@@ -63,7 +63,7 @@ jobs:
         if: ${{ secrets.GEMINI_API_KEY != '' }}
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: pnpm --filter @ui-morph/api exec tsx ../../tools/agent-eval/run_eval.ts --split val --json > val_result.json
+        run: pnpm --filter @ui-morph/api exec tsx ../tools/agent-eval/run_eval.ts --split val --json > val_result.json
       - name: Check regression vs baseline
         if: ${{ secrets.GEMINI_API_KEY != '' }}
         env:

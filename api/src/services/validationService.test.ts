@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ValidationError,
+  validateAgentMessageRequest,
   validateConfig,
   validateOverride,
   validateOverrideRequest,
@@ -10,10 +11,10 @@ describe('validateOverride', () => {
   it('accepts valid style overrides', () => {
     expect(
       validateOverride({
-        style: { color: 'red', fontSize: '18px', backgroundColor: '#fff' },
+        style: { color: 'red', fontSize: '18px', backgroundColor: '#fff', gridColumn: 'span 4' },
       }),
     ).toEqual({
-      style: { color: 'red', fontSize: '18px', backgroundColor: '#fff' },
+      style: { color: 'red', fontSize: '18px', backgroundColor: '#fff', gridColumn: 'span 4' },
     });
   });
 
@@ -119,6 +120,57 @@ describe('validateOverrideRequest', () => {
       path: 'morph.div:0',
       type: 'manual',
       changes: { hidden: true },
+    });
+  });
+
+  it('accepts agent edit scope metadata', () => {
+    expect(
+      validateAgentMessageRequest({
+        userId: 'user-1',
+        viewId: 'dashboard',
+        message: 'make this compact',
+        config: {},
+        snapshot: {
+          viewId: 'dashboard',
+          nodeCount: 1,
+          nodes: [
+            {
+              path: 'morph.div:0',
+              tag: 'div',
+              segment: 'div:0',
+              textLeaf: false,
+              hidden: false,
+              layout: {
+                display: 'block',
+                isGridItem: true,
+                gridColumn: 'span 3',
+                columnSpan: 3,
+                maxColumnSpan: 12,
+              },
+              bounds: { width: 240, height: 120 },
+              capabilities: {
+                visibility: true,
+                text: false,
+                style: true,
+                resize: true,
+                reorder: true,
+              },
+              children: [],
+            },
+          ],
+        },
+        editScope: {
+          rootPath: 'morph',
+          mode: 'selected-subtree',
+          allowedPaths: ['morph.div:0'],
+          allowedParentPaths: [],
+        },
+      }).editScope,
+    ).toEqual({
+      rootPath: 'morph',
+      mode: 'selected-subtree',
+      allowedPaths: ['morph.div:0'],
+      allowedParentPaths: [],
     });
   });
 

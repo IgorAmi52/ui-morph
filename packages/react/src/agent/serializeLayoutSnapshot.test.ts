@@ -49,6 +49,10 @@ describe('serializeLayoutSnapshot', () => {
     expect(h1Node?.textLeaf).toBe(true);
     expect(h1Node?.text).toContain('Title');
     expect(h1Node?.override?.style?.color).toBe('red');
+    expect(h1Node?.computed?.fontSize).toBeDefined();
+    expect(h1Node?.layout?.display).toBeDefined();
+    expect(h1Node?.bounds?.width).toBeDefined();
+    expect(h1Node?.capabilities?.text).toBe(true);
   });
 
   it('skips data-morph-editor subtrees', () => {
