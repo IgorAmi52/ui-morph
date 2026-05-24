@@ -24,7 +24,7 @@ const HIDE_SELECTED_INTENT = new RegExp([
   '\\btake\\s+(this|that|it|selected)\\s+away\\b',
 ].join('|'), 'i');
 const LEGACY_CONSOLE_TRANSFORM_INTENT =
-  /\btransform\s+this\s+legacy\s+console\b|\bmake\s+this\s+legacy\s+console\b|\brestructure\s+this\s+legacy\s+console\b/i;
+  /\btransform\s+this\s+legacy\s+console\b|\bmake\s+this\s+legacy\s+console\b|\brestructure\s+this\s+legacy\s+console\b|\bmodernize\s+this\s+legacy\s+dashboard\b/i;
 
 function getModelName(): string {
   return process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
@@ -170,6 +170,14 @@ function addOverride(
   if (node) changes.push({ path: node.path, override });
 }
 
+function childOrderByIds(parent: LayoutNode | undefined, ids: string[]): string[] {
+  if (!parent) return [];
+  const segmentsById = new Map(parent.children.map((child) => [child.segment, child.segment]));
+  return ids
+    .map((id) => segmentsById.get(`id:${id}`))
+    .filter((segment): segment is string => Boolean(segment));
+}
+
 function legacyConsoleTransform(request: AgentMessageRequest): AgentMessageResponse | null {
   if (!request.selectedPath || !LEGACY_CONSOLE_TRANSFORM_INTENT.test(request.message)) return null;
 
@@ -180,29 +188,69 @@ function legacyConsoleTransform(request: AgentMessageRequest): AgentMessageRespo
   }
 
   const changes: Array<{ path: string; override: ElementOverride }> = [];
-  const hideIds = [
+  const modernOrder = childOrderByIds(boardNode, [
+    'legacy-console-topbar',
+    'filter-toolbar',
+    'metric-auth-ovr',
+    'metric-cov-hold',
+    'metric-vnd-sla',
+    'metric-res-delta',
+    'reserve-trend-dashboard',
+    'claim-workload-table',
+    'sla-heatmap-dashboard',
+    'queue-aging-dashboard',
+    'region-exposure-dashboard',
+    'authority-funnel-dashboard',
+    'selected-file-record',
+    'reserve-layer-stack',
+    'vendor-sla-panel',
+    'system-health-dashboard',
     'global-alert-strip',
     'legacy-tab-overflow',
+    'left-service-navigation',
     'active-filter-cloud',
+    'metric-siu-subro',
+    'metric-doc-err',
+    'metric-fnol-lag',
+    'metric-lit-hold',
     'rule-diagnostics',
     'coverage-question-stack',
     'batch-job-monitor',
     'compliance-checklist',
     'audit-timeline',
     'raw-system-payload',
-  ];
-
-  hideIds.forEach((id) => addOverride(changes, findNodeById(request.snapshot, id), { hidden: true }));
+  ]);
 
   addOverride(changes, consoleNode, {
     style: {
       backgroundColor: '#f8fafc',
-      padding: '10px',
+      padding: '16px',
     },
   });
   addOverride(changes, boardNode, {
+    ...(modernOrder.length > 0 ? { childOrder: modernOrder } : {}),
     style: {
-      gap: '10px',
+      gap: '14px',
+    },
+  });
+  addOverride(changes, findNodeById(request.snapshot, 'legacy-console-topbar'), {
+    style: {
+      minHeight: '56px',
+      padding: '12px',
+      backgroundColor: '#ffffff',
+      color: '#0f172a',
+      borderColor: '#bfdbfe',
+      borderRadius: '8px',
+      boxShadow: '0 8px 22px rgba(15, 23, 42, 0.08)',
+    },
+  });
+  addOverride(changes, findNodeById(request.snapshot, 'filter-toolbar'), {
+    style: {
+      padding: '10px',
+      backgroundColor: '#ffffff',
+      borderColor: '#cbd5e1',
+      borderRadius: '8px',
+      boxShadow: '0 4px 14px rgba(15, 23, 42, 0.05)',
     },
   });
 
@@ -211,21 +259,67 @@ function legacyConsoleTransform(request: AgentMessageRequest): AgentMessageRespo
       gridColumn: 'span 8',
       backgroundColor: '#eff6ff',
       borderColor: '#93c5fd',
-      boxShadow: '0 10px 24px rgba(37, 99, 235, 0.12)',
+      borderRadius: '8px',
+      boxShadow: '0 14px 32px rgba(37, 99, 235, 0.14)',
     },
   });
   addOverride(changes, findNodeById(request.snapshot, 'claim-workload-table'), {
     style: {
-      gridColumn: 'span 10',
+      gridColumn: 'span 8',
       backgroundColor: '#f8fafc',
       borderColor: '#cbd5e1',
+      borderRadius: '8px',
+      boxShadow: '0 10px 24px rgba(15, 23, 42, 0.08)',
     },
   });
   addOverride(changes, findNodeById(request.snapshot, 'sla-heatmap-dashboard'), {
-    style: { gridColumn: 'span 4', backgroundColor: '#ffffff' },
+    style: { gridColumn: 'span 4', backgroundColor: '#ffffff', borderRadius: '8px' },
   });
   addOverride(changes, findNodeById(request.snapshot, 'queue-aging-dashboard'), {
-    style: { gridColumn: 'span 4', backgroundColor: '#ffffff' },
+    style: { gridColumn: 'span 4', backgroundColor: '#ffffff', borderRadius: '8px' },
+  });
+  addOverride(changes, findNodeById(request.snapshot, 'region-exposure-dashboard'), {
+    style: { gridColumn: 'span 4', backgroundColor: '#ffffff', borderRadius: '8px' },
+  });
+  addOverride(changes, findNodeById(request.snapshot, 'authority-funnel-dashboard'), {
+    style: { gridColumn: 'span 4', backgroundColor: '#ffffff', borderRadius: '8px' },
+  });
+  addOverride(changes, findNodeById(request.snapshot, 'selected-file-record'), {
+    style: { gridColumn: 'span 4', backgroundColor: '#ffffff', borderRadius: '8px' },
+  });
+  addOverride(changes, findNodeById(request.snapshot, 'reserve-layer-stack'), {
+    style: { gridColumn: 'span 6', backgroundColor: '#ffffff', borderRadius: '8px' },
+  });
+  addOverride(changes, findNodeById(request.snapshot, 'vendor-sla-panel'), {
+    style: { gridColumn: 'span 6', backgroundColor: '#ffffff', borderRadius: '8px' },
+  });
+  addOverride(changes, findNodeById(request.snapshot, 'system-health-dashboard'), {
+    style: { gridColumn: 'span 4', backgroundColor: '#ffffff', borderRadius: '8px' },
+  });
+
+  [
+    'global-alert-strip',
+    'legacy-tab-overflow',
+    'left-service-navigation',
+    'active-filter-cloud',
+    'rule-diagnostics',
+    'coverage-question-stack',
+    'batch-job-monitor',
+    'compliance-checklist',
+    'audit-timeline',
+    'raw-system-payload',
+  ].forEach((id) => {
+    addOverride(changes, findNodeById(request.snapshot, id), {
+      style: {
+        gridColumn: 'span 3',
+        maxHeight: '168px',
+        overflow: 'hidden',
+        backgroundColor: '#ffffff',
+        borderColor: '#e2e8f0',
+        borderRadius: '8px',
+        opacity: '0.9',
+      },
+    });
   });
 
   [
@@ -241,9 +335,12 @@ function legacyConsoleTransform(request: AgentMessageRequest): AgentMessageRespo
     const metric = findNodeById(request.snapshot, id);
     addOverride(changes, metric, {
       style: {
+        gridColumn: 'span 3',
         backgroundColor: '#ffffff',
         borderColor: '#bfdbfe',
-        boxShadow: '0 6px 16px rgba(15, 23, 42, 0.08)',
+        borderRadius: '8px',
+        padding: '12px',
+        boxShadow: '0 8px 20px rgba(15, 23, 42, 0.08)',
       },
     });
     addOverride(changes, findFirstDescendant(metric, (node) => node.tag === 'strong'), {
@@ -280,7 +377,7 @@ function legacyConsoleTransform(request: AgentMessageRequest): AgentMessageRespo
   }
 
   return {
-    reply: 'I cleaned up the legacy console, hid lower-priority sections, emphasized the key metrics, and gave the main dashboard panels a more polished visual treatment. Review the changes on the page and accept or discard below.',
+    reply: 'I prepared a deterministic dashboard layout update: moved KPIs and core panels to the top, widened the reserve and workload sections, compacted low-priority modules, and kept every section visible. Review the changes on the page and accept or discard below.',
     proposedConfig,
     changes: summarizeConfigChanges(request.config, proposedConfig, request.snapshot),
     appliedTools: ['legacy_console_transform'],

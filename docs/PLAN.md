@@ -314,6 +314,68 @@ Prompt output should be structured, not free-form text. Example agent output:
 }
 ```
 
+### Legacy dashboard preset transform
+
+Current code has a deterministic legacy-console branch before the Gemini agent:
+
+- Frontend starter prompt: `packages/react/src/editor/controls/AgentChat.tsx`.
+- Server fixed transform: `api/src/services/layoutAgent.ts` (`legacyConsoleTransform`).
+- Demo target: `demo/src/pages/LargeLoss.tsx` / `demo/src/styles/large-loss.css`.
+
+This should stay a fixed preset, not a general LLM interpretation. The point of the click is to visibly convert a dense legacy operations console into a cleaner dashboard proposal with predictable output.
+
+Preset trigger:
+- Show the starter prompt only when the selected path is inside `legacy-claims-console` or `legacy-reorderable-module-board`.
+- Use specific user-facing copy such as: `Modernize this legacy dashboard: move KPIs and core panels to the top, widen the reserve and workload sections, compact low-priority modules, and keep every section visible.`
+- Broaden the server intent matcher to accept the shorter prompt while still matching the existing `Transform this legacy console...` copy.
+- Keep the selection guard so the preset cannot run on unrelated pages.
+
+Transformation plan:
+- Do not hide, show, or unhide modules in this preset. Visibility remains a separate user-approved action.
+- Reorder the board so the page reads as a modern dashboard:
+  1. `legacy-console-topbar`
+  2. `filter-toolbar`
+  3. high-signal metric cards
+  4. `reserve-trend-dashboard`
+  5. `claim-workload-table`
+  6. analytical panels such as heatmap, queue aging, region exposure, and authority funnel
+  7. supporting operational panels
+- Make layout changes large enough to read immediately:
+  - Increase board gap and outer console padding.
+  - Restyle the topbar away from the dark legacy header into a lighter dashboard header.
+  - Give metrics larger numbers, more padding, rounded borders, and a softer card treatment.
+  - Make `reserve-trend-dashboard` a dominant wide panel.
+  - Make `claim-workload-table` a wide secondary panel.
+  - Keep smaller analytical panels in a balanced row using `gridColumn` spans.
+  - Move low-priority modules lower in the order and compact them with smaller spans, bounded height, and overflow clipping.
+- Use only supported override fields:
+  - `style`
+  - `childOrder`
+- Do not change text content for this preset. The demo should prove layout transformation, not copywriting.
+
+Expected fixed override types:
+- `childOrder` on the `legacy-reorderable-module-board` node using direct child segments.
+- `style.gridColumn` on major dashboard panels and metric cards.
+- Visual styles such as `backgroundColor`, `borderColor`, `borderRadius`, `boxShadow`, `padding`, `gap`, `fontSize`, `color`, `maxHeight`, `overflow`, and `opacity`.
+- No `hidden` overrides. If a user wants to remove sections, that should happen through an explicit manual hide action or a separate prompt with Accept/Discard.
+
+Acceptance criteria:
+- One click on the preset produces a live preview before Accept.
+- The transformed page no longer looks like the original dense legacy grid.
+- The first viewport shows a cleaner header/filter area, four strong KPIs, and a dominant dashboard panel.
+- Low-priority diagnostic, audit, JSON, tab, alert, and side-navigation sections remain visible unless the user separately approves hiding them.
+- The result is deterministic and does not require Gemini for the preset path.
+- Accept persists through the existing Save/config flow; Discard restores the previous config.
+
+Verification:
+- Add/update API tests around `legacyConsoleTransform`:
+  - The preset returns `appliedTools: ["legacy_console_transform"]`.
+  - No proposed override includes `hidden`.
+  - The board has a `childOrder` containing the modern visible order.
+  - The dominant dashboard panels and metrics receive the intended `gridColumn` and visual styles.
+- Run focused API tests after implementation.
+- Manually check the demo in edit mode by selecting the legacy dashboard, clicking the preset, and confirming the preview is visibly transformed before Accept.
+
 ---
 
 ## Frontend Architecture Notes

@@ -1,12 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { AgentChatMessage, AgentMessageRequest, ConfigChangeSummary, MorphConfig } from '../../types';
 import { useMorphContext } from '../../config/ConfigContext';
-import { fetchChatHistory, saveChatHistory } from '../../config/agentClient';
 import { sendAgentMessageStream } from '../../config/agentStreamClient';
 import {
-  fromStoredMessages,
   newChatMessageId,
-  serializeLiveHistory,
 } from '../../agent/chatPersistence';
 import { serializeLayoutSnapshot } from '../../agent/serializeLayoutSnapshot';
 import {
@@ -26,7 +23,7 @@ function newProposalId(): string {
 }
 
 const LEGACY_CONSOLE_DEMO_PROMPT =
-  'Transform this legacy console: hide the alert strip, tab row, active constraints, raw payload, and low-priority side panels; make the metric numbers and panel titles larger; give the reserve and workload panels a soft blue background; make the reserve dashboard wider and the remaining layout cleaner.';
+  'Modernize this legacy dashboard: move KPIs and core panels to the top, widen the reserve and workload sections, compact low-priority modules, and keep every section visible.';
 
 function legacyConsoleSuggestions(selectedPath: string | null, suggestions: string[]): string[] {
   if (!selectedPath?.includes('id:legacy-claims-console') &&
@@ -53,8 +50,6 @@ export function AgentChat({
     selectedPath,
     userId,
     viewId,
-    sessionId,
-    routeId,
     apiUrl,
     saveConfig,
     onError,
@@ -62,12 +57,12 @@ export function AgentChat({
   const containerRef = useEditorContainer();
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<AgentChatMessage[]>([]);
-  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [approvalBusy, setApprovalBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const selectedPathRef = useRef<string | null>(selectedPath);
 
   const pendingProposalIndex = history.findIndex(
     (m) => m.proposal?.status === 'pending',
@@ -78,39 +73,17 @@ export function AgentChat({
   const starterSuggestions = legacyConsoleSuggestions(selectedPath, suggestions);
 
   useEffect(() => {
-    if (!apiUrl) return;
-    let cancelled = false;
-    void fetchChatHistory(apiUrl, userId, viewId, sessionId, routeId)
-      .then((stored) => {
-        if (!cancelled) {
-          setHistory(fromStoredMessages(stored));
-          setHistoryLoaded(true);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setHistoryLoaded(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [apiUrl, userId, viewId, sessionId, routeId]);
-
-  useEffect(() => {
-    if (!apiUrl || !historyLoaded) return;
-    const timer = window.setTimeout(() => {
-      void saveChatHistory(
-        apiUrl,
-        userId,
-        viewId,
-        serializeLiveHistory(history),
-        sessionId,
-        routeId,
-      ).catch(
-        () => undefined,
-      );
-    }, 400);
-    return () => window.clearTimeout(timer);
-  }, [apiUrl, history, historyLoaded, userId, viewId, sessionId, routeId]);
+    if (selectedPathRef.current === selectedPath || approvalBusy) return;
+    selectedPathRef.current = selectedPath;
+    if (pendingMessage?.proposal?.status === 'pending') {
+      dispatch({ type: 'SET_CONFIG', payload: pendingMessage.proposal.beforeConfig });
+    }
+    setInput('');
+    setError(null);
+    setStreamingText('');
+    setLoading(false);
+    setHistory([]);
+  }, [approvalBusy, dispatch, pendingMessage, selectedPath]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
