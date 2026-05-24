@@ -412,6 +412,7 @@ function validateGeneratedPageSection(raw: unknown, label: string): GeneratedPag
     id: requiredStringField(section, 'id'),
     title: sanitizeText(requiredStringField(section, 'title')),
     sourceRouteId: optionalString(section.sourceRouteId),
+    sourceFragmentId: optionalString(section.sourceFragmentId),
     visualHtml: section.visualHtml !== undefined
       ? sanitizeHtml(String(section.visualHtml), `${label}.visualHtml`)
       : undefined,
@@ -436,9 +437,11 @@ function validateGeneratedPageVisualFragment(raw: unknown, label: string): Gener
     throw new ValidationError(`${label} must be an object`);
   }
   const fragment = raw as Record<string, unknown>;
+  const kind = fragment.kind;
   return {
     id: requiredStringField(fragment, 'id'),
     label: sanitizeText(requiredStringField(fragment, 'label')),
+    kind: kind === 'table' || kind === 'section' || kind === 'visual' ? kind : undefined,
     routeId: requiredStringField(fragment, 'routeId'),
     path: requiredStringField(fragment, 'path'),
     html: sanitizeHtml(requiredStringField(fragment, 'html'), `${label}.html`),

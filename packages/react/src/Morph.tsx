@@ -362,6 +362,7 @@ function MorphInner({
     const snapshot = serializeLayoutSnapshot(snapshotContainer, {
       viewId,
       config,
+      detail: 'content',
     });
     return upsertPageSnapshot(userId, sessionId, {
       viewId,

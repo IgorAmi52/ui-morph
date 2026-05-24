@@ -41,7 +41,8 @@ export function GeneratedPageView({ definition }: { definition: GeneratedPageDef
               <div
                 style={{
                   width: '100%',
-                  overflow: 'hidden',
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
                   marginBottom: 12,
                 }}
                 dangerouslySetInnerHTML={{ __html: section.visualHtml }}

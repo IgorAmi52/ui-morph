@@ -358,7 +358,9 @@ export function CreatePageModal({
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
                   {sources.map((source) => {
                     const checked = selected.has(source.routeId);
-                    const visualCount = source.visualFragments?.length ?? 0;
+                    const fragmentCount = source.visualFragments?.length ?? 0;
+                    const tableCount = source.visualFragments
+                      ?.filter((fragment) => fragment.kind === 'table').length ?? 0;
                     const sample = firstText(source.snapshot.nodes);
                     return (
                       <label
@@ -383,7 +385,8 @@ export function CreatePageModal({
                         </span>
                         <span style={{ color: '#475569', fontSize: 12 }}>
                           {source.snapshot.nodeCount} nodes
-                          {visualCount > 0 ? ` · ${visualCount} visual${visualCount === 1 ? '' : 's'}` : ''}
+                          {fragmentCount > 0 ? ` · ${fragmentCount} block${fragmentCount === 1 ? '' : 's'}` : ''}
+                          {tableCount > 0 ? ` · ${tableCount} table${tableCount === 1 ? '' : 's'}` : ''}
                         </span>
                         {sample && (
                           <span style={{ color: '#64748b', fontSize: 12, lineHeight: 1.35 }}>

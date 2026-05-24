@@ -83,6 +83,7 @@ function buildNode(
   el: HTMLElement,
   config: MorphConfig,
   state: BuildState,
+  detail: 'full' | 'content',
 ): LayoutNode | null {
   if (state.count >= MAX_NODES) {
     state.truncated = true;
@@ -108,11 +109,12 @@ function buildNode(
 
   const children: LayoutNode[] = [];
   for (const child of childElements) {
-    const node = buildNode(child, config, state);
+    const node = buildNode(child, config, state, detail);
     if (node) children.push(node);
     if (state.truncated && state.count >= MAX_NODES) break;
   }
 
+  const fullDetail = detail === 'full';
   return {
     path,
     tag: el.tagName.toLowerCase(),
@@ -122,11 +124,11 @@ function buildNode(
     text,
     textLeaf,
     hidden: override?.hidden ?? false,
-    override: override ? { ...override } : undefined,
-    computed: readComputed(el),
-    layout: readLayout(el),
-    bounds: readBounds(el),
-    capabilities: readCapabilities(el, textLeaf),
+    override: fullDetail && override ? { ...override } : undefined,
+    computed: fullDetail ? readComputed(el) : undefined,
+    layout: fullDetail ? readLayout(el) : undefined,
+    bounds: fullDetail ? readBounds(el) : undefined,
+    capabilities: fullDetail ? readCapabilities(el, textLeaf) : undefined,
     children,
   };
 }
@@ -139,10 +141,12 @@ export function serializeLayoutSnapshot(
     viewId: string;
     config: MorphConfig;
     selectedPath?: string | null;
+    detail?: 'full' | 'content';
   },
 ): LayoutSnapshot {
   const state: BuildState = { count: 0, truncated: false };
   const nodes: LayoutNode[] = [];
+  const detail = options.detail ?? 'full';
 
   const rootChildren = Array.from(container.children).filter(
     (ch): ch is HTMLElement =>
@@ -152,7 +156,7 @@ export function serializeLayoutSnapshot(
   );
 
   for (const el of rootChildren) {
-    const node = buildNode(el, options.config, state);
+    const node = buildNode(el, options.config, state, detail);
     if (node) nodes.push(node);
     if (state.truncated) break;
   }

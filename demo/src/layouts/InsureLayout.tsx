@@ -72,7 +72,7 @@ export default function InsureLayout() {
             ))}
           </div>
         </aside>
-        <main className="layout__main">
+        <main className="layout__main" data-morph-passthrough>
           <Outlet />
         </main>
       </div>

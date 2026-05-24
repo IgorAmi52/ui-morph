@@ -147,6 +147,7 @@ export interface GeneratedPageSection {
   id: string;
   title: string;
   sourceRouteId?: string;
+  sourceFragmentId?: string;
   visualHtml?: string;
   items: GeneratedPageItem[];
 }
@@ -160,6 +161,7 @@ export interface GeneratedPageDefinition {
 export interface GeneratedPageVisualFragment {
   id: string;
   label: string;
+  kind?: 'visual' | 'table' | 'section';
   routeId: string;
   path: string;
   html: string;

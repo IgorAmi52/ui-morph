@@ -4,7 +4,21 @@ const MAX_SNAPSHOTS = 12;
 const MAX_VISUAL_FRAGMENTS = 8;
 const MAX_FRAGMENT_HTML = 28000;
 const STORAGE_PREFIX = 'ui-morph:page-snapshots';
-const VISUAL_SELECTOR = 'svg,img,canvas,video,picture,[role="img"]';
+const FRAGMENT_SELECTOR = [
+  'table',
+  '[role="table"]',
+  '[role="grid"]',
+  'svg',
+  'img',
+  'canvas',
+  'video',
+  'picture',
+  '[role="img"]',
+].join(',');
+const TABLE_CONTAINER_CLASS_PATTERN =
+  /card|panel|table|module/i;
+const VISUAL_CONTAINER_CLASS_PATTERN =
+  /card|panel|chart-card|widget|metric|module/i;
 
 function storageKey(userId: string, sessionId: string): string {
   return `${STORAGE_PREFIX}:${userId}:${sessionId}`;
@@ -90,23 +104,49 @@ function sanitizeClone(root: HTMLElement): void {
   }
 }
 
-function captureTargetForVisual(visual: HTMLElement, root: HTMLElement): HTMLElement | null {
-  let current: HTMLElement | null = visual;
-  let best: HTMLElement | null = visual.closest<HTMLElement>('[data-morph-path]');
+function fragmentKind(el: HTMLElement): GeneratedPageVisualFragment['kind'] {
+  const tag = el.tagName.toLowerCase();
+  const role = el.getAttribute('role');
+  if (tag === 'table' || role === 'table' || role === 'grid') return 'table';
+  if (tag === 'section' || tag === 'article') return 'section';
+  return 'visual';
+}
+
+function numberAttr(el: HTMLElement, attr: string): number {
+  const raw = el.getAttribute(attr);
+  if (!raw) return 0;
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isDecorativeVisual(el: HTMLElement): boolean {
+  const tag = el.tagName.toLowerCase();
+  if (tag !== 'svg' && tag !== 'img') return false;
+  if (el.getAttribute('role') === 'img') return false;
+  if (el.getAttribute('aria-label') || el.querySelector('title')) return false;
+  const width = numberAttr(el, 'width');
+  const height = numberAttr(el, 'height');
+  return (width > 0 && width <= 32) || (height > 0 && height <= 32);
+}
+
+function isFragmentContainer(el: HTMLElement, kind: GeneratedPageVisualFragment['kind']): boolean {
+  const className = String(el.getAttribute('class') ?? '');
+  const tag = el.tagName.toLowerCase();
+  if (tag === 'article' || tag === 'section') return true;
+  if (kind === 'table') return TABLE_CONTAINER_CLASS_PATTERN.test(className);
+  return VISUAL_CONTAINER_CLASS_PATTERN.test(className);
+}
+
+function captureTargetForFragment(fragment: HTMLElement, root: HTMLElement): HTMLElement | null {
+  let current: HTMLElement | null = fragment;
+  let best: HTMLElement | null = fragment.closest<HTMLElement>('[data-morph-path]');
+  const kind = fragmentKind(fragment);
   let depth = 0;
 
   while (current && current !== root && depth < 6) {
     const morphEl: HTMLElement | null = current.closest('[data-morph-path]');
     if (!morphEl) break;
-    const className = String(morphEl.getAttribute('class') ?? '');
-    const tag = morphEl.tagName.toLowerCase();
-    const textLength = (morphEl.textContent ?? '').replace(/\s+/g, ' ').trim().length;
-    if (
-      /card|panel|chart|widget|metric|section/i.test(className) ||
-      tag === 'article' ||
-      tag === 'section' ||
-      (textLength > 0 && textLength < 900)
-    ) {
+    if (isFragmentContainer(morphEl, kind)) {
       best = morphEl;
     }
     current = morphEl.parentElement;
@@ -116,17 +156,25 @@ function captureTargetForVisual(visual: HTMLElement, root: HTMLElement): HTMLEle
   return best;
 }
 
+function addFragmentTarget(targets: Set<HTMLElement>, target: HTMLElement): void {
+  for (const existing of Array.from(targets)) {
+    if (existing.contains(target)) return;
+    if (target.contains(existing)) targets.delete(existing);
+  }
+  targets.add(target);
+}
+
 export function captureVisualFragments(
   container: HTMLElement,
   routeId: string,
 ): GeneratedPageVisualFragment[] {
   const targets = new Set<HTMLElement>();
-  const visuals = Array.from(container.querySelectorAll<HTMLElement>(VISUAL_SELECTOR))
-    .filter((el) => !el.closest('[data-morph-editor]'));
+  const fragments = Array.from(container.querySelectorAll<HTMLElement>(FRAGMENT_SELECTOR))
+    .filter((el) => !el.closest('[data-morph-editor]') && !isDecorativeVisual(el));
 
-  for (const visual of visuals) {
-    const target = captureTargetForVisual(visual, container);
-    if (target) targets.add(target);
+  for (const fragment of fragments) {
+    const target = captureTargetForFragment(fragment, container);
+    if (target) addFragmentTarget(targets, target);
     if (targets.size >= MAX_VISUAL_FRAGMENTS) break;
   }
 
@@ -139,6 +187,9 @@ export function captureVisualFragments(
     return {
       id: `visual-${routeId}-${index}`,
       label: fragmentLabel(target, routeLabel(routeId, '')),
+      kind: target.querySelector('table,[role="table"],[role="grid"]')
+        ? 'table'
+        : fragmentKind(target),
       routeId,
       path,
       html,
