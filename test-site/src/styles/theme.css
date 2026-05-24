@@ -1,0 +1,37 @@
+:root {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --sidebar-bg: #0f172a;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --text-on-dark: #e2e8f0;
+  --text-muted-on-dark: #64748b;
+  --accent: #0891b2;
+  --accent-hover: #0e7490;
+  --accent-light: rgba(8, 145, 178, 0.1);
+  --accent-text: #ffffff;
+  --border: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --row-hover: #f8fafc;
+  --row-selected: rgba(8, 145, 178, 0.06);
+  --input-bg: #ffffff;
+  --kbd-bg: #f1f5f9;
+  --badge-bg: #e2e8f0;
+  --btn-dark-bg: #0f172a;
+  --btn-dark-text: #ffffff;
+  --success: #059669;
+  --danger: #dc2626;
+  --warning: #d97706;
+  --info: #2563eb;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --title-size: 1.5rem;
+  --title-weight: 700;
+  --chart-grid: #e2e8f0;
+  --logo-bg: linear-gradient(135deg, #0891b2, #06b6d4);
+  --nav-active-bg: rgba(8, 145, 178, 0.15);
+  --nav-active-border: #0891b2;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+}

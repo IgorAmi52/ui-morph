@@ -1,0 +1,28 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge--success { background: rgba(5, 150, 105, 0.1); color: var(--success); }
+.badge--pending { background: rgba(37, 99, 235, 0.1); color: var(--info); }
+.badge--warning { background: rgba(217, 119, 6, 0.1); color: var(--warning); }
+.badge--danger { background: rgba(220, 38, 38, 0.1); color: var(--danger); }
+.badge--info { background: rgba(37, 99, 235, 0.1); color: var(--info); }
+.badge--accent { background: var(--accent-light); color: var(--accent); }
+.badge--gold { background: rgba(202, 138, 4, 0.1); color: #ca8a04; }
+.badge--neutral { background: var(--border-subtle); color: var(--text-secondary); }
+
+.customer-cell__name {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.customer-cell__email {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
