@@ -3,7 +3,7 @@
 
 # Run test app  
 `cd test-app`  
-`npm install`
+`npm install`  
 `npm run dev`
 
 
