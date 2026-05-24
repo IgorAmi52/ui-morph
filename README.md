@@ -5,8 +5,7 @@
 
 # Run everything
 1. `pnpm install`
-2. `pnpm dev:all`
+2. `make all`
 
-You can also use `make dev`, which delegates to `pnpm dev:all`.
 
 
