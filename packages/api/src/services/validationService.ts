@@ -1,7 +1,14 @@
 import type {
+  AgentPageRequest,
   AgentMessageRequest,
   AgentSuggestionsRequest,
   ElementOverride,
+  GeneratedPageDefinition,
+  GeneratedPageItem,
+  GeneratedPageSection,
+  GeneratedPageSourceSnapshot,
+  GeneratedPageSourceSummary,
+  GeneratedPageVisualFragment,
   LayoutNode,
   LayoutSnapshot,
 } from '../types.js';
@@ -61,6 +68,8 @@ const DANGEROUS_STYLE_PATTERN =
   /url\s*\(|expression\s*\(|javascript\s*:|@import|behavior\s*:/i;
 
 const SCRIPT_TAG_PATTERN = /<\s*script\b/i;
+const DANGEROUS_HTML_PATTERN =
+  /<\s*(script|iframe|object|embed)\b|on[a-z]+\s*=|javascript\s*:/i;
 
 export class ValidationError extends Error {
   constructor(message: string) {
@@ -283,6 +292,167 @@ function validateLayoutSnapshot(snapshot: unknown): LayoutSnapshot {
     nodeCount: s.nodeCount,
     nodes: s.nodes.map((n, i) => validateLayoutNode(n, `snapshot.nodes[${i}]`)),
   };
+}
+
+function requiredStringField(body: Record<string, unknown>, key: string): string {
+  const value = body[key];
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new ValidationError(`${key} is required`);
+  }
+  return value.trim();
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function validateGeneratedPageItem(raw: unknown, label: string): GeneratedPageItem {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    throw new ValidationError(`${label} must be an object`);
+  }
+  const item = raw as Record<string, unknown>;
+  const kind = item.kind;
+  if (kind !== 'text' && kind !== 'metric' && kind !== 'list') {
+    throw new ValidationError(`${label}.kind must be text, metric, or list`);
+  }
+  return {
+    id: requiredStringField(item, 'id'),
+    label: sanitizeText(requiredStringField(item, 'label')),
+    text: item.text !== undefined ? sanitizeText(String(item.text)) : undefined,
+    value: item.value !== undefined ? sanitizeText(String(item.value)) : undefined,
+    kind,
+  };
+}
+
+function validateGeneratedPageSection(raw: unknown, label: string): GeneratedPageSection {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    throw new ValidationError(`${label} must be an object`);
+  }
+  const section = raw as Record<string, unknown>;
+  if (!Array.isArray(section.items)) {
+    throw new ValidationError(`${label}.items must be an array`);
+  }
+  return {
+    id: requiredStringField(section, 'id'),
+    title: sanitizeText(requiredStringField(section, 'title')),
+    sourceRouteId: optionalString(section.sourceRouteId),
+    visualHtml: section.visualHtml !== undefined
+      ? sanitizeHtml(String(section.visualHtml), `${label}.visualHtml`)
+      : undefined,
+    items: section.items.map((item, i) => validateGeneratedPageItem(item, `${label}.items[${i}]`)),
+  };
+}
+
+function sanitizeHtml(value: string, label: string): string {
+  const html = value.trim();
+  if (!html) return '';
+  if (html.length > 30000) {
+    throw new ValidationError(`${label} is too large`);
+  }
+  if (DANGEROUS_HTML_PATTERN.test(html)) {
+    throw new ValidationError(`${label} contains disallowed HTML`);
+  }
+  return html;
+}
+
+function validateGeneratedPageVisualFragment(raw: unknown, label: string): GeneratedPageVisualFragment {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    throw new ValidationError(`${label} must be an object`);
+  }
+  const fragment = raw as Record<string, unknown>;
+  return {
+    id: requiredStringField(fragment, 'id'),
+    label: sanitizeText(requiredStringField(fragment, 'label')),
+    routeId: requiredStringField(fragment, 'routeId'),
+    path: requiredStringField(fragment, 'path'),
+    html: sanitizeHtml(requiredStringField(fragment, 'html'), `${label}.html`),
+    text: fragment.text !== undefined ? sanitizeText(String(fragment.text)) : undefined,
+  };
+}
+
+export function validateGeneratedPageDefinition(raw: unknown): GeneratedPageDefinition {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    throw new ValidationError('definition must be an object');
+  }
+  const definition = raw as Record<string, unknown>;
+  if (!Array.isArray(definition.sections)) {
+    throw new ValidationError('definition.sections must be an array');
+  }
+  const sections = definition.sections.map((section, i) =>
+    validateGeneratedPageSection(section, `definition.sections[${i}]`),
+  );
+  if (sections.length === 0) {
+    throw new ValidationError('definition.sections must include at least one section');
+  }
+  return {
+    title: sanitizeText(requiredStringField(definition, 'title')),
+    description: definition.description !== undefined
+      ? sanitizeText(String(definition.description))
+      : undefined,
+    sections,
+  };
+}
+
+function validateGeneratedPageSourceSummary(raw: unknown, label: string): GeneratedPageSourceSummary {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    throw new ValidationError(`${label} must be an object`);
+  }
+  const source = raw as Record<string, unknown>;
+  return {
+    viewId: requiredStringField(source, 'viewId'),
+    routeId: requiredStringField(source, 'routeId'),
+    path: requiredStringField(source, 'path'),
+    label: sanitizeText(requiredStringField(source, 'label')),
+    capturedAt: requiredStringField(source, 'capturedAt'),
+  };
+}
+
+function validateGeneratedPageSourceSnapshot(raw: unknown, label: string): GeneratedPageSourceSnapshot {
+  const summary = validateGeneratedPageSourceSummary(raw, label);
+  const source = raw as Record<string, unknown>;
+  let visualFragments: GeneratedPageVisualFragment[] | undefined;
+  if (source.visualFragments !== undefined) {
+    if (!Array.isArray(source.visualFragments)) {
+      throw new ValidationError(`${label}.visualFragments must be an array`);
+    }
+    visualFragments = source.visualFragments
+      .slice(0, 8)
+      .map((fragment, i) =>
+        validateGeneratedPageVisualFragment(fragment, `${label}.visualFragments[${i}]`),
+      );
+  }
+  return {
+    ...summary,
+    snapshot: validateLayoutSnapshot(source.snapshot),
+    visualFragments,
+  };
+}
+
+export function validateAgentPageRequest(body: unknown): AgentPageRequest {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    throw new ValidationError('Request body must be an object');
+  }
+  const b = body as Record<string, unknown>;
+  if (!Array.isArray(b.sources) || b.sources.length === 0) {
+    throw new ValidationError('sources must include at least one page snapshot');
+  }
+  return {
+    userId: requiredStringField(b, 'userId'),
+    viewId: requiredStringField(b, 'viewId'),
+    sessionId: optionalString(b.sessionId) ?? 'default',
+    routeId: optionalString(b.routeId) ?? requiredStringField(b, 'viewId'),
+    prompt: sanitizeText(requiredStringField(b, 'prompt')),
+    sources: b.sources.map((source, i) =>
+      validateGeneratedPageSourceSnapshot(source, `sources[${i}]`),
+    ),
+  };
+}
+
+export function validateGeneratedPageSources(raw: unknown): GeneratedPageSourceSummary[] {
+  if (!Array.isArray(raw)) {
+    throw new ValidationError('sources must be an array');
+  }
+  return raw.map((source, i) => validateGeneratedPageSourceSummary(source, `sources[${i}]`));
 }
 
 export function validateAgentSuggestionsRequest(body: unknown): AgentSuggestionsRequest {

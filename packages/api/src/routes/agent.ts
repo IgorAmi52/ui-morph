@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import {
+  validateAgentPageRequest,
   validateAgentMessageRequest,
   validateAgentSuggestionsRequest,
 } from '../services/validationService.js';
 import { runLayoutAgent } from '../services/layoutAgent.js';
+import { generatePageDefinition } from '../services/pageAgentService.js';
 import { generateLayoutSuggestions } from '../services/suggestionAgent.js';
 import { streamLayoutAgent } from '../services/streamLayoutAgent.js';
 import { formatSseEvent } from '../agent/agentEvents.js';
@@ -17,6 +19,15 @@ agentRouter.post(
     const payload = validateAgentSuggestionsRequest(req.body);
     const suggestions = await generateLayoutSuggestions(payload);
     res.json({ suggestions });
+  }),
+);
+
+agentRouter.post(
+  '/page',
+  asyncHandler(async (req, res) => {
+    const payload = validateAgentPageRequest(req.body);
+    const result = await generatePageDefinition(payload);
+    res.json(result);
   }),
 );
 

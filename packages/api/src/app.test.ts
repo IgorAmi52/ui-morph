@@ -256,6 +256,123 @@ describe('HTTP API', () => {
     });
   });
 
+  describe('generated pages', () => {
+    it('generates, creates, fetches, and edits a generated page', async () => {
+      const agentRes = await request(app)
+        .post('/agent/page')
+        .send({
+          userId: 'user-a',
+          viewId: 'dashboard',
+          sessionId: 'client-a',
+          routeId: 'dashboard',
+          prompt: 'Create an overview page',
+          sources: [
+            {
+              viewId: 'dashboard',
+              routeId: 'dashboard',
+              path: '/',
+              label: 'Dashboard',
+              capturedAt: '2026-01-01T00:00:00.000Z',
+              visualFragments: [
+                {
+                  id: 'visual-dashboard-0',
+                  label: 'Claim mix chart',
+                  routeId: 'dashboard',
+                  path: 'morph.div:0',
+                  html: '<section><h2>Claim mix chart</h2><svg role="img" aria-label="Pie chart"><circle cx="8" cy="8" r="8"></circle></svg></section>',
+                  text: 'Claim mix chart',
+                },
+              ],
+              snapshot: {
+                viewId: 'dashboard',
+                nodeCount: 2,
+                nodes: [
+                  {
+                    path: 'morph.div:0',
+                    tag: 'div',
+                    segment: 'div:0',
+                    textLeaf: false,
+                    hidden: false,
+                    children: [
+                      {
+                        path: 'morph.div:0.h1:0',
+                        tag: 'h1',
+                        segment: 'h1:0',
+                        text: 'Claims overview',
+                        textLeaf: true,
+                        hidden: false,
+                        children: [],
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          ],
+        })
+        .expect(200);
+
+      expect(agentRes.body.definition.title).toBe('Create an overview page');
+      expect(agentRes.body.definition.sections[0].items[0].text).toBe('Claims overview');
+      expect(agentRes.body.definition.sections[0].visualHtml).toContain('<svg');
+
+      const createRes = await request(app)
+        .post('/pages')
+        .send({
+          userId: 'user-a',
+          sessionId: 'client-a',
+          routeId: 'dashboard',
+          prompt: 'Create an overview page',
+          sources: [
+            {
+              viewId: 'dashboard',
+              routeId: 'dashboard',
+              path: '/',
+              label: 'Dashboard',
+              capturedAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+          definition: agentRes.body.definition,
+        })
+        .expect(201);
+
+      expect(createRes.body).toMatchObject({
+        userId: 'user-a',
+        sessionId: 'client-a',
+        title: 'Create an overview page',
+        prompt: 'Create an overview page',
+        version: 1,
+      });
+      expect(createRes.body.viewId).toMatch(/^page:/);
+      expect(typeof createRes.body.pageId).toBe('string');
+
+      const pageId = createRes.body.pageId as string;
+      const getRes = await request(app).get(`/pages/${pageId}`).expect(200);
+      expect(getRes.body.definition).toEqual(agentRes.body.definition);
+
+      const overrides = { 'morph.section:0': { style: { backgroundColor: '#ffffff' } } };
+      await request(app)
+        .put(`/pages/${pageId}/config`)
+        .send({ overrides })
+        .expect(200)
+        .expect(overrides);
+
+      await request(app)
+        .get(`/pages/${pageId}/config`)
+        .expect(200)
+        .expect(overrides);
+    });
+
+    it('returns 404 for unknown generated pages', async () => {
+      await request(app).get('/pages/missing-page').expect(404);
+      await request(app).get('/pages/missing-page/config').expect(404);
+      await request(app)
+        .put('/pages/missing-page/config')
+        .send({ overrides: {} })
+        .expect(404);
+    });
+  });
+
   describe('POST /override', () => {
     it('applies a manual override and returns full config', async () => {
       await request(app)
