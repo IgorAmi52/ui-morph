@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { RefObject } from 'react';
+import { getDisabledCapabilities, isCapabilityEnabled } from './capabilities';
 
 interface HandlePosition {
   path: string;
@@ -33,6 +34,7 @@ export function DragHandleLayer({ containerRef }: DragHandleLayerProps) {
       const next: HandlePosition[] = [];
       for (const el of els) {
         if (el.closest('[data-morph-editor]')) continue;
+        if (!isCapabilityEnabled(getDisabledCapabilities(el), 'reorder')) continue;
         const path = el.getAttribute('data-morph-path');
         if (!path) continue;
         const rect = el.getBoundingClientRect();

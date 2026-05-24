@@ -1,6 +1,6 @@
-import { createContext, useContext, useReducer, useState, useCallback } from 'react';
+import { createContext, useContext, useReducer, useState, useCallback, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import type { MorphContextValue, MorphMode, MorphConfig, StorageAdapter } from '../types';
+import type { MorphContextValue, MorphMode, MorphConfig, StorageAdapter, ConfigAction } from '../types';
 import { configReducer, initialConfig } from './configReducer';
 
 const MorphContext = createContext<MorphContextValue | null>(null);
@@ -30,8 +30,22 @@ export function ConfigProvider({
   onError,
   children,
 }: ConfigProviderProps) {
-  const [config, dispatch] = useReducer(configReducer, initial ?? initialConfig);
+  const [config, reducerDispatch] = useReducer(configReducer, initial ?? initialConfig);
+  const configRef = useRef(config);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
+
+  const dispatch = useCallback((action: ConfigAction) => {
+    configRef.current = configReducer(configRef.current, action);
+    reducerDispatch(action);
+  }, []);
+
+  useEffect(() => {
+    configRef.current = config;
+  }, [config]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_CONFIG', payload: initial ?? initialConfig });
+  }, [dispatch, initial]);
 
   const selectElement = useCallback((path: string | null) => {
     setSelectedPath(path);
@@ -39,14 +53,16 @@ export function ConfigProvider({
 
   const saveConfig = useCallback(async (): Promise<boolean> => {
     try {
-      await adapter.saveConfig(userId, viewId, config);
-      onSave?.(config);
+      const latestConfig = configRef.current;
+      const savedConfig = await adapter.saveConfig(userId, viewId, latestConfig);
+      dispatch({ type: 'SET_CONFIG', payload: savedConfig });
+      onSave?.(savedConfig);
       return true;
     } catch (err) {
       onError?.(err instanceof Error ? err : new Error(String(err)));
       return false;
     }
-  }, [adapter, userId, viewId, config, onSave, onError]);
+  }, [adapter, userId, viewId, dispatch, onSave, onError]);
 
   const value: MorphContextValue = {
     config,

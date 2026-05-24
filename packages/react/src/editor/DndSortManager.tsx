@@ -2,9 +2,12 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { useMorphContext } from '../config/ConfigContext';
 import { getParentPath, getSegment } from '../tree/domDecorator';
+import type { MorphConfig } from '../types';
+import { getDisabledCapabilities, isCapabilityEnabled } from './capabilities';
 import { DropIndicator } from './DropIndicator';
 
 interface DndSortManagerProps {
+  active: boolean;
   containerRef: RefObject<HTMLDivElement | null>;
   children: ReactNode;
   onDragActiveChange: (active: boolean) => void;
@@ -40,14 +43,34 @@ interface OverlayPosition {
 
 const DRAG_ACTIVATION_DISTANCE = 6;
 
-function getSiblingPaths(container: HTMLElement, parentPath: string): string[] {
+function getSiblingPaths(
+  container: HTMLElement,
+  parentPath: string,
+  config: MorphConfig,
+): string[] {
   const paths: string[] = [];
   const allEls = container.querySelectorAll<HTMLElement>('[data-morph-path]');
   for (const el of allEls) {
     const p = el.getAttribute('data-morph-path')!;
     if (getParentPath(p) === parentPath) paths.push(p);
   }
-  return paths;
+
+  const childOrder = config[parentPath]?.childOrder;
+  if (!childOrder || childOrder.length === 0) return paths;
+
+  const bySegment = new Map(paths.map((path) => [getSegment(path), path]));
+  const ordered: string[] = [];
+
+  for (const segment of childOrder) {
+    const path = bySegment.get(segment);
+    if (path) {
+      ordered.push(path);
+      bySegment.delete(segment);
+    }
+  }
+
+  ordered.push(...bySegment.values());
+  return ordered;
 }
 
 function computeDropTarget(
@@ -100,24 +123,32 @@ function computeDropTarget(
   return { index, target: { rect: closest.rect, position, axis } };
 }
 
-function getPointerDragPath(target: EventTarget | null): string | null {
+function getPointerDragPath(container: HTMLElement, target: EventTarget | null): string | null {
   if (!(target instanceof Element)) return null;
 
   const handle = target.closest<HTMLElement>('[data-morph-drag-handle]');
-  if (handle) return handle.getAttribute('data-morph-drag-handle');
+  if (handle) {
+    const path = handle.getAttribute('data-morph-drag-handle');
+    if (!path) return null;
+    const el = container.querySelector<HTMLElement>(`[data-morph-path="${CSS.escape(path)}"]`);
+    if (!el || !isCapabilityEnabled(getDisabledCapabilities(el), 'reorder')) return null;
+    return path;
+  }
 
   if (target.closest('[data-morph-editor]')) return null;
 
   const morphEl = target.closest<HTMLElement>('[data-morph-path]');
+  if (!morphEl || !isCapabilityEnabled(getDisabledCapabilities(morphEl), 'reorder')) return null;
   return morphEl?.getAttribute('data-morph-path') ?? null;
 }
 
 export function DndSortManager({
+  active,
   containerRef,
   children,
   onDragActiveChange,
 }: DndSortManagerProps) {
-  const { dispatch } = useMorphContext();
+  const { config, dispatch } = useMorphContext();
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
   const [overlayPosition, setOverlayPosition] = useState<OverlayPosition | null>(null);
@@ -140,7 +171,7 @@ export function DndSortManager({
       const parent = getParentPath(path);
       if (!parent || !containerRef.current) return null;
 
-      const siblings = getSiblingPaths(containerRef.current, parent);
+      const siblings = getSiblingPaths(containerRef.current, parent, config);
       if (siblings.length < 2) return null;
 
       const el = containerRef.current.querySelector<HTMLElement>(
@@ -167,7 +198,7 @@ export function DndSortManager({
       onDragActiveChange(true);
       return next;
     },
-    [containerRef, onDragActiveChange],
+    [config, containerRef, onDragActiveChange],
   );
 
   const updateDropTarget = useCallback((event: PointerEvent, state: DragState) => {
@@ -212,6 +243,11 @@ export function DndSortManager({
   }, [dispatch, resetDrag]);
 
   useEffect(() => {
+    if (!active) {
+      resetDrag();
+      return;
+    }
+
     const container = containerRef.current;
     if (!container) return;
 
@@ -230,7 +266,7 @@ export function DndSortManager({
     const handlePointerDown = (event: PointerEvent) => {
       if (!event.isPrimary || event.button !== 0) return;
 
-      const path = getPointerDragPath(event.target);
+      const path = getPointerDragPath(container, event.target);
       if (!path) return;
 
       candidateRef.current = { path, startX: event.clientX, startY: event.clientY };
@@ -298,13 +334,13 @@ export function DndSortManager({
       container.removeEventListener('pointerdown', handlePointerDown, true);
       removeWindowListeners();
     };
-  }, [beginDrag, containerRef, finishDrag, resetDrag, updateDropTarget]);
+  }, [active, beginDrag, containerRef, finishDrag, resetDrag, updateDropTarget]);
 
   return (
     <>
       {children}
-      <DropIndicator target={dropTarget} />
-      {dragState && overlayPosition && (
+      {active && <DropIndicator target={dropTarget} />}
+      {active && dragState && overlayPosition && (
         <div
           data-morph-editor
           className="morph-editor-drag-overlay"

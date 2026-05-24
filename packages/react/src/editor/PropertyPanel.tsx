@@ -2,21 +2,37 @@ import { useState, useEffect, useCallback } from 'react';
 import { useMorphContext } from '../config/ConfigContext';
 import type { ElementOverride } from '../types';
 import { VisibilityToggle } from './controls/VisibilityToggle';
-import { TextEditor } from './controls/TextEditor';
 import { ColorPicker } from './controls/ColorPicker';
 import { SizeControl } from './controls/SizeControl';
 import { AiPromptInput } from './controls/AiPromptInput';
+import {
+  getDisabledCapabilities,
+  isCapabilityEnabled,
+  type MorphCapability,
+} from './capabilities';
 
 type Tab = 'manual' | 'ai';
 
 interface Defaults {
-  text: string;
   color: string;
   bg: string;
   fontSize: string;
 }
 
-const EMPTY_DEFAULTS: Defaults = { text: '', color: '#000000', bg: '#ffffff', fontSize: '16px' };
+interface SelectedElementState {
+  defaults: Defaults;
+  disabledCapabilities: Set<MorphCapability>;
+}
+
+const EMPTY_DEFAULTS: Defaults = {
+  color: '#000000',
+  bg: '#ffffff',
+  fontSize: '16px',
+};
+const EMPTY_STATE: SelectedElementState = {
+  defaults: EMPTY_DEFAULTS,
+  disabledCapabilities: new Set(),
+};
 
 function rgbToHex(rgb: string): string {
   const match = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -25,28 +41,37 @@ function rgbToHex(rgb: string): string {
   return '#' + [r, g, b].map(c => Number(c).toString(16).padStart(2, '0')).join('');
 }
 
-function readDefaults(path: string): Defaults {
+function readSelectedElementState(path: string): SelectedElementState {
   const el = document.querySelector<HTMLElement>(`[data-morph-path="${CSS.escape(path)}"]`);
-  if (!el) return EMPTY_DEFAULTS;
+  if (!el) return EMPTY_STATE;
   const computed = getComputedStyle(el);
   return {
-    text: el.textContent ?? '',
-    color: rgbToHex(computed.color),
-    bg: rgbToHex(computed.backgroundColor),
-    fontSize: computed.fontSize,
+    defaults: {
+      color: rgbToHex(computed.color),
+      bg: rgbToHex(computed.backgroundColor),
+      fontSize: computed.fontSize,
+    },
+    disabledCapabilities: getDisabledCapabilities(el),
   };
 }
 
 export function PropertyPanel() {
   const { selectedPath, config, dispatch, selectElement } = useMorphContext();
   const [activeTab, setActiveTab] = useState<Tab>('manual');
-  const [defaults, setDefaults] = useState<Defaults>(EMPTY_DEFAULTS);
+  const [elementState, setElementState] = useState<SelectedElementState>(EMPTY_STATE);
 
   const override = selectedPath ? config[selectedPath] ?? {} : {};
+  const { defaults, disabledCapabilities } = elementState;
+  const canChangeVisibility = isCapabilityEnabled(disabledCapabilities, 'visibility');
+  const canChangeTextColor = isCapabilityEnabled(disabledCapabilities, 'textColor');
+  const canChangeBackground = isCapabilityEnabled(disabledCapabilities, 'background');
+  const canResize = isCapabilityEnabled(disabledCapabilities, 'resize');
+  const canUseAi = isCapabilityEnabled(disabledCapabilities, 'ai');
+  const hasManualControls = canChangeVisibility || canChangeTextColor || canChangeBackground || canResize;
 
   useEffect(() => {
     if (!selectedPath) return;
-    setDefaults(readDefaults(selectedPath));
+    setElementState(readSelectedElementState(selectedPath));
   }, [selectedPath]);
 
   const updateOverride = useCallback(
@@ -86,8 +111,12 @@ export function PropertyPanel() {
   return (
     <div data-morph-editor className="morph-editor-panel">
       <div className="morph-editor-panel__header">
-        <div className="morph-editor-panel__path" title={selectedPath}>{selectedPath}</div>
-        <button className="morph-editor-panel__close" onClick={() => selectElement(null)}>
+        <div className="morph-editor-panel__title">Element settings</div>
+        <button
+          className="morph-editor-panel__close"
+          onClick={() => selectElement(null)}
+          aria-label="Close"
+        >
           x
         </button>
       </div>
@@ -102,6 +131,7 @@ export function PropertyPanel() {
         <button
           className={`morph-editor-panel__tab${activeTab === 'ai' ? ' morph-editor-panel__tab--active' : ''}`}
           onClick={() => setActiveTab('ai')}
+          disabled={!canUseAi}
         >
           AI Prompt
         </button>
@@ -110,49 +140,58 @@ export function PropertyPanel() {
       <div className="morph-editor-panel__body">
         {activeTab === 'manual' ? (
           <>
-            <VisibilityToggle
-              hidden={override.hidden ?? false}
-              onChange={(hidden) => updateOverride({ hidden })}
-            />
-            <div className="morph-editor-separator" />
-            <TextEditor
-              text={override.text}
-              placeholder={defaults.text}
-              onChange={(text) => updateOverride({ text })}
-              onClear={() => {
-                const { text: _, ...rest } = override;
-                if (!selectedPath) return;
-                dispatch({ type: 'SET_CONFIG', payload: { ...config, [selectedPath]: rest } });
-              }}
-            />
-            <div className="morph-editor-separator" />
-            <ColorPicker
-              label="Text color"
-              value={override.style?.color ?? defaults.color}
-              onChange={(color) => updateStyle('color', color)}
-              onClear={() => clearStyleProp('color')}
-            />
-            <ColorPicker
-              label="Background"
-              value={override.style?.backgroundColor ?? defaults.bg}
-              onChange={(bg) => updateStyle('backgroundColor', bg)}
-              onClear={() => clearStyleProp('backgroundColor')}
-            />
-            <SizeControl
-              fontSize={override.style?.fontSize ?? defaults.fontSize}
-              onChange={(fs) => updateStyle('fontSize', fs)}
-              onClear={() => clearStyleProp('fontSize')}
-            />
-            <div className="morph-editor-separator" />
-            <button
-              className="morph-editor-btn morph-editor-btn--danger morph-editor-btn--full"
-              onClick={resetOverride}
-            >
-              Reset all overrides
-            </button>
+            {!hasManualControls && (
+              <div className="morph-editor-empty">No manual controls available for this element.</div>
+            )}
+            {canChangeVisibility && (
+              <>
+                <VisibilityToggle
+                  hidden={override.hidden ?? false}
+                  onChange={(hidden) => updateOverride({ hidden })}
+                />
+                <div className="morph-editor-separator" />
+              </>
+            )}
+            {canChangeTextColor && (
+              <ColorPicker
+                label="Text color"
+                value={override.style?.color ?? defaults.color}
+                onChange={(color) => updateStyle('color', color)}
+                onClear={() => clearStyleProp('color')}
+              />
+            )}
+            {canChangeBackground && (
+              <ColorPicker
+                label="Background"
+                value={override.style?.backgroundColor ?? defaults.bg}
+                onChange={(bg) => updateStyle('backgroundColor', bg)}
+                onClear={() => clearStyleProp('backgroundColor')}
+              />
+            )}
+            {canResize && (
+              <SizeControl
+                fontSize={override.style?.fontSize ?? defaults.fontSize}
+                isOverridden={override.style?.fontSize !== undefined}
+                onChange={(fs) => updateStyle('fontSize', fs)}
+                onClear={() => clearStyleProp('fontSize')}
+              />
+            )}
+            {hasManualControls && (
+              <>
+                <div className="morph-editor-separator" />
+                <button
+                  className="morph-editor-btn morph-editor-btn--danger morph-editor-btn--full"
+                  onClick={resetOverride}
+                >
+                  Reset all overrides
+                </button>
+              </>
+            )}
           </>
+        ) : canUseAi ? (
+          <AiPromptInput />
         ) : (
-          <AiPromptInput path={selectedPath} />
+          <div className="morph-editor-empty">AI prompts are disabled for this element.</div>
         )}
       </div>
     </div>

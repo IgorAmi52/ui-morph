@@ -1,23 +1,11 @@
-import type { StorageAdapter, MorphConfig } from '../types';
+import type { StorageAdapter } from '../types';
 
-const STORAGE_PREFIX = 'ui-morph:';
-
-function storageKey(userId: string, viewId: string): string {
-  return `${STORAGE_PREFIX}${userId}:${viewId}`;
-}
-
-export const localStorageAdapter: StorageAdapter = {
-  async getConfig(userId, viewId) {
-    try {
-      const raw = localStorage.getItem(storageKey(userId, viewId));
-      return raw ? (JSON.parse(raw) as MorphConfig) : {};
-    } catch {
-      return {};
-    }
+export const transientStorageAdapter: StorageAdapter = {
+  async getConfig() {
+    return {};
   },
 
-  async saveConfig(userId, viewId, config) {
-    localStorage.setItem(storageKey(userId, viewId), JSON.stringify(config));
+  async saveConfig(_userId, _viewId, config) {
     return config;
   },
 };

@@ -2,7 +2,6 @@ import type { ReactNode, Dispatch } from 'react';
 
 export interface ElementOverride {
   hidden?: boolean;
-  text?: string;
   style?: Record<string, string>;
   childOrder?: string[];
 }

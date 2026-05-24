@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import type { MorphProps, MorphConfig, MorphMode } from './types';
 import { ConfigProvider, useMorphContext } from './config/ConfigContext';
 import { createAdapter } from './config/createAdapter';
 import { EditModeProvider } from './editor/EditModeProvider';
 import { MorphToggleButton } from './editor/MorphToggleButton';
 import { decoratePaths, applyDomOverrides, cleanDomOverrides } from './tree/domDecorator';
+
+const EMPTY_CONFIG: MorphConfig = {};
 
 function resolveViewId(explicit?: string): string {
   if (explicit) return explicit;
@@ -25,7 +27,10 @@ export function Morph({
   children,
 }: MorphProps) {
   const viewId = resolveViewId(viewIdProp);
-  const [config, setConfig] = useState<MorphConfig | null>(null);
+  const usesRemoteConfig = Boolean(apiUrl);
+  const [config, setConfig] = useState<MorphConfig | null>(() => (
+    usesRemoteConfig ? null : EMPTY_CONFIG
+  ));
   const [internalMode, setInternalMode] = useState<MorphMode>('view');
   const adapterRef = useRef(createAdapter(apiUrl));
 
@@ -39,7 +44,13 @@ export function Morph({
   const exposedToggle = (!isControlled && editable) ? toggleMode : null;
 
   useEffect(() => {
+    if (!usesRemoteConfig) {
+      setConfig(EMPTY_CONFIG);
+      return;
+    }
+
     let cancelled = false;
+    setConfig(null);
 
     adapterRef.current
       .getConfig(userId, viewId)
@@ -54,7 +65,7 @@ export function Morph({
       });
 
     return () => { cancelled = true; };
-  }, [userId, viewId, onError]);
+  }, [usesRemoteConfig, userId, viewId, onError]);
 
   if (config === null && fallback) return <>{fallback}</>;
 
@@ -63,7 +74,7 @@ export function Morph({
       mode={activeMode}
       editable={editable}
       toggleMode={exposedToggle}
-      initial={config ?? {}}
+      initial={config ?? EMPTY_CONFIG}
       adapter={adapterRef.current}
       userId={userId}
       viewId={viewId}
@@ -83,7 +94,7 @@ function MorphInner({ children }: { children: React.ReactNode }) {
     if (mode === 'view') selectElement(null);
   }, [mode, selectElement]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -117,18 +128,10 @@ function MorphInner({ children }: { children: React.ReactNode }) {
     return () => observer.disconnect();
   }, [config, mode]);
 
-  if (mode === 'edit') {
-    return (
-      <div ref={containerRef}>
-        <EditModeProvider>{children}</EditModeProvider>
-      </div>
-    );
-  }
-
   return (
     <div ref={containerRef}>
-      {children}
-      {editable && toggleMode && <MorphToggleButton onClick={toggleMode} />}
+      <EditModeProvider active={mode === 'edit'}>{children}</EditModeProvider>
+      {mode === 'view' && editable && toggleMode && <MorphToggleButton onClick={toggleMode} />}
     </div>
   );
 }

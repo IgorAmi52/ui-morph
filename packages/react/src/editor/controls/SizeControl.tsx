@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 
 interface SizeControlProps {
   fontSize: string | undefined;
+  isOverridden: boolean;
   onChange: (fontSize: string) => void;
   onClear: () => void;
 }
 
-export function SizeControl({ fontSize, onChange, onClear }: SizeControlProps) {
+export function SizeControl({ fontSize, isOverridden, onChange, onClear }: SizeControlProps) {
   const numericValue = fontSize ? parseInt(fontSize, 10) : 16;
   const [value, setValue] = useState(String(numericValue));
 
@@ -34,10 +35,11 @@ export function SizeControl({ fontSize, onChange, onClear }: SizeControlProps) {
           min={1}
           max={200}
           style={{ width: 80 }}
+          aria-label="Font size in pixels"
         />
         <span style={{ fontSize: 13, color: '#64748b' }}>px</span>
-        {fontSize !== undefined && (
-          <button className="morph-editor-panel__close" onClick={onClear} title="Clear">
+        {isOverridden && (
+          <button type="button" className="morph-editor-panel__close" onClick={onClear} title="Clear">
             x
           </button>
         )}

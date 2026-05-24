@@ -45,9 +45,8 @@ export function walkTree(
 
     const modifiedProps = modified.props as ElementProps;
     const originalChildren = modifiedProps.children as ReactNode | undefined;
-    const wasTextReplaced = override?.text !== undefined && typeof modifiedProps.children === 'string';
 
-    if (originalChildren != null && !wasTextReplaced) {
+    if (originalChildren != null) {
       const walkedChildren = walkTree(originalChildren, path, options);
       modified = cloneElement(modified, {}, walkedChildren);
     }

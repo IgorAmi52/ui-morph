@@ -1,10 +1,6 @@
 import { useState } from 'react';
 
-interface AiPromptInputProps {
-  path: string;
-}
-
-export function AiPromptInput({ path: _path }: AiPromptInputProps) {
+export function AiPromptInput() {
   const [prompt, setPrompt] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
@@ -30,11 +26,8 @@ export function AiPromptInput({ path: _path }: AiPromptInputProps) {
         disabled={!prompt.trim()}
         style={{ marginTop: 8 }}
       >
-        {submitted ? 'Backend not connected' : 'Apply with AI'}
+        {submitted ? 'AI setup required' : 'Apply with AI'}
       </button>
-      <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
-        AI processing requires a backend connection. The prompt will be sent to POST /override when configured.
-      </p>
     </div>
   );
 }

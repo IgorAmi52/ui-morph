@@ -2,219 +2,174 @@
 
 ## Context
 
-Build a React wrapper component library (`@ui-morph/react`) that SaaS businesses install via npm. They wrap their UI with `<Morph>`, and their end-users can visually customize the interface — hide elements, edit text, change colors/sizes. Customizations persist to a backend database and apply automatically on page load.
+`@ui-morph/react` is a React wrapper component library for SaaS products. Host apps wrap a page or region with `<Morph>`, and end users can visually customize that UI in edit mode.
 
-This is an **MVP** — single SaaS instance, per-user configs. No multi-tenant API key infrastructure yet.
+Current MVP customization scope:
+- Hide/show elements.
+- Change safe style values such as text color, background color, font size, width, and height.
+- Reorder sibling elements.
+- Save and reload the resulting config through a backend.
+- Send selected-element prompts to a future agent backend.
 
-**AI editing** (per-element natural language prompts) is designed into the architecture but the AI agent backend is a separate concern — we build the frontend affordance (prompt input per element) and the API contract, not the AI processing itself.
+Explicitly out of scope:
+- Text/content editing.
+- Browser `localStorage` persistence.
+- Multi-tenant API key management.
+- Displaying internal element IDs or paths in the end-user editor UI.
 
----
-
-## Decisions Made
-
-| Decision | Choice |
-|---|---|
-| Element discovery | `React.Children` + `cloneElement` tree walking (no Fiber internals) |
-| Scope | Phase 1: hide/show, text edit, style overrides, drag/move sibling reordering, persistence. |
-| Backend | Simple Express REST API with PostgreSQL |
-| Build | Vite library mode + TypeScript, pnpm monorepo |
-| Change flow | All changes (manual + AI) go through backend for validation before persisting |
-| Auth | MVP: per-user scoping via `userId` prop. No API key infrastructure yet. |
-| Drag/move | Native pointer-event drag manager over decorated DOM nodes; no DnD dependency. |
-
----
-
-## Package Structure
-
-```
-ui-morph/
-├── pnpm-workspace.yaml
-├── package.json                    # root scripts, shared devDeps
-├── tsconfig.base.json
-├── .gitignore
-│
-├── packages/
-│   ├── react/                      # @ui-morph/react (the npm library)
-│   │   ├── package.json            # react as peerDep (>=17)
-│   │   ├── vite.config.ts          # lib mode → ESM + CJS
-│   │   ├── tsconfig.json
-│   │   └── src/
-│   │       ├── index.ts            # public barrel: Morph, types
-│   │       ├── Morph.tsx           # main wrapper component
-│   │       ├── types.ts
-│   │       ├── tree/
-│   │       │   ├── walkTree.ts     # recursive tree walker
-│   │       │   ├── pathUtils.ts    # path ID generation + stability
-│   │       │   └── applyOverrides.ts
-│   │       ├── config/
-│   │       │   ├── ConfigContext.tsx
-│   │       │   ├── configReducer.ts
-│   │       │   └── apiClient.ts
-│   │       └── editor/
-│   │           ├── EditModeProvider.tsx
-│   │           ├── DndSortManager.tsx
-│   │           ├── DragHandleLayer.tsx
-│   │           ├── DropIndicator.tsx
-│   │           ├── SelectionOverlay.tsx
-│   │           ├── PropertyPanel.tsx
-│   │           └── controls/
-│   │               ├── TextEditor.tsx
-│   │               ├── ColorPicker.tsx
-│   │               ├── SizeControl.tsx
-│   │               ├── VisibilityToggle.tsx
-│   │               └── AiPromptInput.tsx
-│   │
-│   ├── api/                        # @ui-morph/api (backend)
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   └── src/
-│   │       ├── index.ts
-│   │       ├── app.ts             # Express app factory
-│   │       ├── routes/
-│   │       │   ├── config.ts      # GET /config/:userId/:viewId
-│   │       │   └── override.ts    # POST /override (validate + persist)
-│   │       ├── services/
-│   │       │   ├── configService.ts    # business logic + validation
-│   │       │   └── validationService.ts
-│   │       ├── db/
-│   │       │   ├── client.ts      # pg pool wrapper
-│   │       │   └── migrations/001_initial.sql
-│   │       └── middleware/
-│   │           └── errorHandler.ts
-│   │
-│   └── demo/                       # dev playground
-│       ├── package.json
-│       ├── vite.config.ts
-│       └── src/
-│           ├── main.tsx
-│           ├── App.tsx
-│           └── SampleDashboard.tsx
-```
-
----
-
-## Core Architecture
-
-### 1. `<Morph>` Component — The Single Public Entry Point
+Host apps can disable individual customization capabilities with attributes:
 
 ```tsx
-<Morph userId={currentUser.id} viewId="dashboard" apiUrl="http://localhost:3001">
-  <Header />
-  <Sidebar />
-  <MainContent />
+<section data-morph-disable="background color">...</section>
+<button data-morph-disable="ai reorder">Submit</button>
+<div data-morph-disable="all">...</div>
+```
+
+Supported disable tokens:
+- `visibility`
+- `color`
+- `background`
+- `resize` (`fontSize`, `width`, and `height`)
+- `reorder`
+- `ai`
+- `style` (`color`, `background`, and `resize`)
+- `all`
+
+`data-morph-lock` and `data-morph-locked` also disable all capabilities. Disabled capabilities are inherited by descendants.
+
+The editor also applies a small set of implicit defaults. Headings (`h1`-`h6`) are treated as non-resizable by default. Host apps can opt back in with:
+
+```tsx
+<h1 data-morph-enable="resize">Dashboard</h1>
+```
+
+---
+
+## Current Frontend Contract
+
+### `<Morph>` Usage
+
+```tsx
+<Morph
+  userId={currentUser.id}
+  viewId="dashboard"
+  apiUrl="http://localhost:3001"
+  editable
+>
+  <Dashboard />
 </Morph>
 ```
 
-**Props**:
-- `userId` — identifies the end user (from SaaS app's auth)
-- `viewId` — identifies which page/view this wraps (e.g., `"dashboard"`, `"settings"`)
-- `apiUrl` — backend URL
-- `mode` — `'view'` (default) or `'edit'`
-- `onSave`, `onError` — callbacks
-- `fallback` — shown while loading config
-- `children` — the wrapped UI
+Props:
+- `userId`: scopes config to one end user.
+- `viewId`: scopes config to one page/view. If omitted, the current pathname is used.
+- `apiUrl`: optional backend base URL.
+- `editable`: shows the edit-mode entry button when uncontrolled.
+- `mode`: optional controlled mode, `'view' | 'edit'`.
+- `onSave`: called after successful save.
+- `onError`: called when config fetch/save fails.
+- `fallback`: optional loading UI for remote config.
 
-Config is scoped to `(userId, viewId)` — each user has their own customizations per view.
+Storage behavior:
+- Without `apiUrl`, the frontend uses a transient in-memory adapter. It does not persist anywhere.
+- With `apiUrl`, the frontend fetches config on mount and saves the full config on Save.
 
-**Behavior on mount**:
-1. Fetch config from `GET {apiUrl}/config/{userId}/{viewId}`
-2. Walk children tree via `React.Children` + `cloneElement`, applying overrides
-3. Render modified tree
+### Config Shape
 
-**Loading strategy**: Render children unmodified while config loads (no layout shift), then apply overrides once fetched.
+```ts
+export interface ElementOverride {
+  hidden?: boolean;
+  style?: Record<string, string>;
+  childOrder?: string[];
+}
 
-### 2. Tree Walker (`walkTree.ts`) — The Core Algorithm
+export type MorphConfig = Record<string, ElementOverride>;
+```
 
-Recursively traverses the React element tree. For each element:
-1. Compute a stable path ID
-2. Look up overrides in config
-3. Apply overrides (hide, style merge, text replace)
-4. In edit mode: wrap element with `<MorphEditable>` for selection/interaction
-5. Recurse into children
-
-### 3. Path Stability (`pathUtils.ts`) — The Hardest Problem
-
-Paths must survive across host app deploys. Strategy (priority order):
-
-1. **`data-morph-id` prop** — Explicit stable ID set by SaaS developer. Escape hatch for dynamic UIs.
-2. **React `key` prop** — If the element has an explicit key, use `k:{key}`.
-3. **Type-scoped index** — Count this element's position among siblings of the _same type_ (not global index). Adding a `<span>` before a `<div>` doesn't shift the div's path.
-
-Example paths: `morph.div:0.h1:0`, `morph.k:sidebar.ul:0.li:2`, `morph.header.nav:0`
-
-### 4. Config Format
+Example:
 
 ```json
 {
-  "morph.div:0.h1:0": { "style": { "color": "red", "fontSize": "18px" } },
-  "morph.div:1": { "hidden": true },
-  "morph.div:0.p:0": { "text": "Updated welcome message" },
-  "morph.div:0": { "childOrder": ["section:1", "section:0", "section:2"] }
+  "morph.div:0.h1:0": {
+    "style": { "color": "#dc2626", "fontSize": "20px", "width": "320px" }
+  },
+  "morph.div:1": {
+    "hidden": true
+  },
+  "morph.div:0": {
+    "childOrder": ["section:1", "section:0", "section:2"]
+  }
 }
 ```
 
-Type: `Record<string, ElementOverride>` where `ElementOverride = { hidden?, text?, style?, childOrder? }`
+Notes:
+- `style` keys are React-style camelCase, for example `backgroundColor`, `fontSize`, `width`, and `height`.
+- `childOrder` contains child path segments, not full paths.
+- No text override is supported.
 
-### 5. Change Flow — All Changes Through Backend
+### Path Stability
 
+Element paths are internal implementation details and should not be shown to end users.
+
+Path segment priority:
+1. `data-morph-id` prop, if provided by the host app.
+2. Explicit React `key`, when available.
+3. Type-scoped sibling index.
+
+Backend should treat paths as opaque strings.
+
+---
+
+## Backend Persistence Requirements
+
+The backend team should implement full-config persistence first. This matches the current frontend adapter.
+
+### `GET /config/:userId/:viewId`
+
+Returns the saved config for `(userId, viewId)`.
+
+Response:
+
+```json
+{
+  "morph.div:0": {
+    "style": { "backgroundColor": "#f8fafc" }
+  }
+}
 ```
-User edits element → frontend shows optimistic preview →
-  POST /override { userId, viewId, path, changes } →
-    backend validates (sanitize CSS, prevent XSS, apply business rules) →
-      persist to DB → return confirmed config →
-        frontend applies confirmed state
+
+Return `{}` when no config exists.
+
+### `PUT /config/:userId/:viewId`
+
+Upserts the full config for `(userId, viewId)`.
+
+Request body:
+
+```json
+{
+  "overrides": {
+    "morph.div:0": {
+      "style": { "backgroundColor": "#f8fafc" }
+    }
+  }
+}
 ```
 
-Both manual edits and AI prompts follow the same flow:
-- **Manual**: User changes color → `POST /override` with `{ type: "manual", path, changes: { style: { color: "red" } } }`
-- **AI**: User types prompt → `POST /override` with `{ type: "ai_prompt", path, prompt: "make this bigger and red" }` → backend processes via AI agent → returns validated config changes
+Response body should be the validated `MorphConfig` object, not an envelope:
 
-The backend is the single source of truth. Frontend shows optimistic previews but reverts if validation fails.
+```json
+{
+  "morph.div:0": {
+    "style": { "backgroundColor": "#f8fafc" }
+  }
+}
+```
 
-### 6. Edit Mode
+If the backend prefers `{ "overrides": ... }` responses, the frontend adapter must be updated at the same time.
 
-**Two-layer interaction suppression**:
-- Capturing-phase event handlers (`onClickCapture`, etc.) on the edit container — `stopPropagation` + `preventDefault` for all non-editor clicks
-- Editor UI elements marked with `data-morph-editor` are excluded from suppression
+### Persistence Schema
 
-**Element selection flow**:
-Click element → **PropertyPanel** appears with two tabs:
-1. **Manual controls**: visibility toggle, text editor, color picker, size control
-2. **AI prompt**: text input where user describes what they want ("make this text larger and blue")
-
-**Drag/move flow**:
-Pointer-drag a decorated element, or its generated grip handle → **DndSortManager** starts a drag after a small movement threshold → **DropIndicator** shows before/after insertion → releasing the pointer dispatches `REORDER_CHILDREN` with the parent path and new `childOrder`.
-
-Drag is limited to reordering siblings under the same parent. The drop calculation supports vertical stacks and horizontal/grid rows by comparing pointer position against sibling bounding boxes. Editor UI marked with `data-morph-editor` is excluded from drag start.
-
-**UI components**:
-- **SelectionOverlay** — Blue outline around selected element (positioned via `getBoundingClientRect`)
-- **DragHandleLayer** — Fixed-position grip handles aligned beside decorated elements
-- **DndSortManager** — Native pointer-event drag manager that reorders sibling paths
-- **DropIndicator** — Before/after insertion marker for vertical and horizontal layouts
-- **PropertyPanel** — Right sidebar (~300px):
-  - Element path display (debug info)
-  - Tab 1 — Manual: visibility toggle, text editor, color picker, size control, reset buttons
-  - Tab 2 — AI: prompt textarea + submit button
-  - Each change → `POST /override` → backend validates → confirmed
-- **Toolbar** — Floating bar with Save and Exit Edit Mode buttons
-- Hidden elements in edit mode render at 30% opacity with a "hidden" badge
-
-**Zero external dependencies in the library** — native inputs only, styles via injected `<style>` tag with `.morph-editor-*` namespace.
-
-### 7. Backend API
-
-**Endpoints** (Express):
-- `GET /config/:userId/:viewId` — Returns full overrides JSON. Returns `{}` if no config exists.
-- `POST /override` — Validate and apply a single override change. Body: `{ userId, viewId, path, type, changes?, prompt? }`. Returns updated full config.
-
-**Validation service** (`validationService.ts`):
-- Sanitize text values (strip script tags, dangerous HTML)
-- Validate CSS property values (whitelist safe properties)
-- Validate style value formats (no `url()`, `expression()`, etc.)
-- Business rules (future: configurable per SaaS instance)
-
-**Schema**:
 ```sql
 CREATE TABLE morph_configs (
   id          SERIAL PRIMARY KEY,
@@ -227,76 +182,183 @@ CREATE TABLE morph_configs (
 );
 ```
 
+Recommended indexes:
+
+```sql
+CREATE INDEX morph_configs_user_view_idx
+  ON morph_configs (user_id, view_id);
+```
+
+### Validation Rules
+
+Reject invalid configs before saving.
+
+Allowed override keys:
+- `hidden`
+- `style`
+- `childOrder`
+
+Reject:
+- Unknown override keys, including `text`.
+- Non-object per-element values.
+- Non-boolean `hidden`.
+- Non-array or non-string `childOrder` entries.
+- Invalid style properties or values.
+
+Initial safe style whitelist:
+- `color`
+- `backgroundColor`
+- `fontSize`
+- `width`
+- `height`
+
+Style value rules:
+- No `url(...)`.
+- No `expression(...)`.
+- No CSS variables unless explicitly approved.
+- Colors should be hex, rgb/rgba, hsl/hsla, or named colors if the backend chooses to allow them.
+- `fontSize` should be bounded, for example `1px` through `200px`.
+- `width` and `height` should be bounded pixel values, for example `1px` through `4000px`.
+
+The backend should return `400` for validation failures with a useful error payload:
+
+```json
+{
+  "error": "Invalid override",
+  "details": [
+    { "path": "morph.div:0", "field": "style.fontSize", "message": "Font size is out of range" }
+  ]
+}
+```
+
 ---
 
-## React Compatibility
+## Agent Feature Contract
 
-Must work on React 17, 18, and 19. Constraints:
-- No `useId()`, `useSyncExternalStore`, or `use()` — all React 18+/19+ only
-- Stick to: `useState`, `useReducer`, `useEffect`, `useContext`, `useRef`, `useCallback`, `useMemo`
+The frontend already has an AI prompt tab, but it is not wired to a backend yet. The backend can add an agent endpoint after persistence is stable.
+
+Recommended endpoint:
+
+### `POST /agent/override`
+
+Request:
+
+```json
+{
+  "userId": "demo-user",
+  "viewId": "dashboard",
+  "path": "morph.div:0.h1:0",
+  "prompt": "make this heading larger and red",
+  "currentConfig": {
+    "morph.div:0.h1:0": {
+      "style": { "color": "#111827" }
+    }
+  }
+}
+```
+
+Response should return the full validated config, using the same shape as `GET /config`.
+
+```json
+{
+  "morph.div:0.h1:0": {
+    "style": { "color": "#dc2626", "fontSize": "24px" }
+  }
+}
+```
+
+Agent responsibilities:
+- Interpret the prompt into allowed `ElementOverride` changes.
+- Never produce text/content edits.
+- Only produce whitelisted style, visibility, or reorder changes.
+- Run the same validation service used by `PUT /config`.
+- Persist the resulting full config if the agent action is accepted.
+- Return the confirmed full config.
+
+Suggested implementation flow:
+1. Load existing config for `(userId, viewId)`.
+2. Ask the agent to propose a patch for the selected `path`.
+3. Validate the patch against the same schema and style whitelist.
+4. Merge the patch into existing config.
+5. Upsert the full config.
+6. Return the full config.
+
+Prompt output should be structured, not free-form text. Example agent output:
+
+```json
+{
+  "changes": {
+    "style": {
+      "color": "#dc2626",
+      "fontSize": "24px"
+    }
+  }
+}
+```
+
+---
+
+## Frontend Architecture Notes
+
+Current editor components:
+- `Morph.tsx`: wraps children, loads/saves config, decorates DOM nodes, applies overrides.
+- `ConfigContext.tsx`: reducer-backed config state and save callback.
+- `DndSortManager.tsx`: native pointer-based sibling reorder.
+- `DragHandleLayer.tsx`: generated drag handles.
+- `DropIndicator.tsx`: visual drop marker.
+- `SelectionOverlay.tsx`: selected element outline and drag resize handle.
+- `PropertyPanel.tsx`: manual controls and AI prompt tab.
+- `ColorPicker.tsx`, `SizeControl.tsx`, `VisibilityToggle.tsx`, `AiPromptInput.tsx`.
+
+Layout reorder is applied through CSS `order`, not DOM node moves. This avoids fighting React reconciliation.
+Element width and height resize is controlled by a lightweight bottom-right drag handle on the selected outline. The handle stores bounded `style.width` and `style.height` values, clamps growth to the parent/viewport where predictable, and relies on normal document flow to move siblings instead of running a global collision solver.
+
+No external runtime UI dependencies are required by the library.
 
 ---
 
 ## Implementation Order
 
-### Step 1 — Scaffold
-- pnpm workspace, root config, per-package `package.json` and `tsconfig.json`
-- Vite lib config for `packages/react`, Vite app config for `packages/demo`
-- `.gitignore`
-- Verify `pnpm dev` and `pnpm build` work
+### Frontend
 
-### Step 2 — Types + Config Layer
-- `types.ts` — all shared types (`ElementOverride`, `MorphConfig`, `MorphProps`, reducer actions)
-- `configReducer.ts` — pure reducer (SET_CONFIG, SET_OVERRIDE, REMOVE_OVERRIDE)
-- `ConfigContext.tsx` — provider + `useMorphContext` hook
-- `apiClient.ts` — fetch wrapper (`getConfig`, `postOverride`)
+1. Keep transient no-backend mode working for demo/development.
+2. Wire `apiUrl` mode to backend `GET /config` and `PUT /config`.
+3. Keep all manual edits local until Save.
+4. On Save, send the full config.
+5. Later, wire `AiPromptInput` to `POST /agent/override`.
 
-### Step 3 — Tree Walker (most critical)
-- `pathUtils.ts` — `buildSegment`, `computeTypeScopedIndex`, `buildPath`
-- `applyOverrides.ts` — style merging, text detection, hidden handling
-- `walkTree.ts` — recursive walker
-- Unit tests: path determinism, override application, edge cases (fragments, conditionals, deep nesting)
+### Backend
 
-### Step 4 — Morph Component (View Mode)
-- `Morph.tsx` — assemble context + fetch + walkTree + render
-- `index.ts` — barrel exports
-- Test in demo with hardcoded config, then with API
-
-### Step 5 — Backend API
-- DB migration, pg client, error handler
-- Validation service (CSS sanitization, text sanitization)
-- Config service (get config, apply override + validate + persist)
-- Routes (GET config, POST override)
-- Express app + server entry
-- Test with curl
-
-### Step 6 — Edit Mode UI (largest effort)
-- `EditModeProvider.tsx` — overlay shell, event suppression
-- `SelectionOverlay.tsx` — positioned highlight
-- `DndSortManager.tsx` — pointer-event drag/move manager
-- `DragHandleLayer.tsx` — generated grip handles for decorated elements
-- `DropIndicator.tsx` — before/after drop marker
-- `PropertyPanel.tsx` with tabbed layout (Manual / AI Prompt)
-- Manual controls: TextEditor, ColorPicker, SizeControl, VisibilityToggle
-- `AiPromptInput.tsx` — textarea + submit (sends to `POST /override` with `type: "ai_prompt"`)
-- Wire into walkTree (MorphEditable wrapper in edit mode)
-- Each edit → POST /override → update local config on success
-- Drag sibling → dispatch `REORDER_CHILDREN` → persist `childOrder`
-- Full flow test: edit → validate → persist → reload → verify
-
-### Step 7 — Demo + Polish
-- `SampleDashboard.tsx` with realistic UI elements
-- Error boundary around morph tree
-- `onSave`/`onError` callback support
-- Build verification (ESM + CJS)
+1. Create `morph_configs` table.
+2. Implement `GET /config/:userId/:viewId`.
+3. Implement `PUT /config/:userId/:viewId`.
+4. Add config validation and CSS sanitization.
+5. Add integration tests for load/save/reload.
+6. Add `POST /agent/override` after persistence is stable.
+7. Reuse the same validation pipeline for manual saves and agent output.
 
 ---
 
 ## Verification Plan
 
-1. **Unit tests**: Tree walker paths are deterministic; overrides apply correctly; reducer works
-2. **Backend tests**: POST /override validates and rejects bad CSS/XSS text; GET returns correct scoped config
-3. **Integration test**: Demo app → edit mode → click element → change color → backend validates → reload → color persists
-4. **AI prompt flow**: Click element → AI tab → type prompt → POST /override with type ai_prompt → backend receives it (AI processing is out of scope, but the plumbing works)
-5. **Drag/move flow**: Demo app → edit mode → drag an element or grip handle → drop before/after a sibling → `childOrder` updates → save/reload preserves order
-6. **Edge cases**: Conditional rendering doesn't break sibling paths; deeply nested trees; fragments; vertical lists; horizontal/grid sibling layouts
+Frontend:
+- Edit mode opens on first click after page load.
+- Hide/show updates the preview.
+- Color/background/font-size/width/height changes update the preview.
+- Drag resizing clamps to sane bounds and cannot overflow the selected element's parent in common block/flex/grid layouts.
+- Drag reorder updates visual order without moving DOM nodes.
+- Save calls backend when `apiUrl` is provided.
+- No config is persisted when `apiUrl` is omitted.
+
+Backend:
+- `GET` returns `{}` for missing config.
+- `PUT` upserts valid config and returns the validated full config.
+- Unknown keys such as `text` are rejected.
+- Unsafe CSS values are rejected.
+- Save followed by reload returns the same validated config.
+
+Agent:
+- Prompt request is scoped to `(userId, viewId, path)`.
+- Agent output is structured and validated.
+- Agent cannot create text/content edits.
+- Agent result is persisted and returned as full config.
